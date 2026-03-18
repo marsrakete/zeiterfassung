@@ -9,6 +9,7 @@ let editingEntryId = null;
 
 const elements = {
   installButton: document.querySelector("#installButton"),
+  settingsButton: document.querySelector("#settingsButton"),
   activeProjectName: document.querySelector("#activeProjectName"),
   activeTimer: document.querySelector("#activeTimer"),
   projectForm: document.querySelector("#projectForm"),
@@ -44,6 +45,10 @@ const elements = {
   entryEditorEnd: document.querySelector("#entryEditorEnd"),
   entryEditorNote: document.querySelector("#entryEditorNote"),
   entryEditorDeleteButton: document.querySelector("#entryEditorDeleteButton"),
+  settingsDialog: document.querySelector("#settingsDialog"),
+  exportDataButton: document.querySelector("#exportDataButton"),
+  importDataButton: document.querySelector("#importDataButton"),
+  importDataInput: document.querySelector("#importDataInput"),
   emptyStateTemplate: document.querySelector("#emptyStateTemplate")
 };
 
@@ -85,6 +90,37 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function replaceState(nextState) {
+  state.version = nextState.version || APP_VERSION;
+  state.projects = Array.isArray(nextState.projects) ? nextState.projects : [];
+  state.entries = Array.isArray(nextState.entries) ? nextState.entries : [];
+  state.activeSession = nextState.activeSession || null;
+  saveState();
+}
+
+async function shareOrDownloadFile(file, fallbackName, title) {
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        title,
+        files: [file]
+      });
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fallbackName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function initializeDefaults() {
   const now = new Date();
   elements.exportDay.value = toDateInputValue(now);
@@ -107,6 +143,14 @@ function bindEvents() {
   elements.entryEditorDialog.addEventListener("close", () => {
     editingEntryId = null;
   });
+  elements.settingsButton.addEventListener("click", () => {
+    elements.settingsDialog.showModal();
+  });
+  elements.exportDataButton.addEventListener("click", exportAppData);
+  elements.importDataButton.addEventListener("click", () => {
+    elements.importDataInput.click();
+  });
+  elements.importDataInput.addEventListener("change", handleImportData);
   elements.installButton.addEventListener("click", installApp);
   elements.confirmDialog.addEventListener("close", handleDeleteDialogClose);
 
@@ -173,7 +217,7 @@ function handleManualEntrySubmit(event) {
   render();
 }
 
-function handleExportSubmit(event) {
+async function handleExportSubmit(event) {
   event.preventDefault();
 
   const range = getSelectedRange();
@@ -187,12 +231,8 @@ function handleExportSubmit(event) {
   const workbook = createSpreadsheetXml(rows, range.label);
   const blob = new Blob([workbook], { type: "application/vnd.ms-excel" });
   const fileName = `zeiterfassung-${range.fileStamp}.xls`;
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const file = new File([blob], fileName, { type: blob.type });
+  await shareOrDownloadFile(file, fileName, "Zeiterfassung exportieren");
 }
 
 function updateExportFields() {
@@ -486,6 +526,61 @@ function handleEntryEditorDelete() {
   promptDeleteEntry(editingEntryId);
 }
 
+async function exportAppData() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    app: "Projekt-Zeiterfassung",
+    version: APP_VERSION,
+    data: {
+      version: state.version,
+      projects: state.projects,
+      entries: state.entries,
+      activeSession: state.activeSession
+    }
+  };
+
+  const file = new File(
+    [JSON.stringify(payload, null, 2)],
+    `zeiterfassung-daten-${toDateInputValue(new Date())}.json`,
+    { type: "application/json" }
+  );
+
+  await shareOrDownloadFile(file, file.name, "Zeiterfassungsdaten exportieren");
+}
+
+async function handleImportData(event) {
+  const [file] = event.target.files || [];
+  event.target.value = "";
+
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const importedState = parsed.data || parsed;
+
+    if (!isValidImportedState(importedState)) {
+      alert("Die ausgewählte Datei enthält keine gültigen Zeiterfassungsdaten.");
+      return;
+    }
+
+    openConfirmation({
+      title: "Daten importieren?",
+      message: "Sollen die aktuell gespeicherten Daten durch die importierten Daten ersetzt werden?",
+      confirmLabel: "Ja, importieren",
+      onConfirm: () => {
+        replaceState(importedState);
+        elements.settingsDialog.close();
+        render();
+      }
+    });
+  } catch {
+    alert("Die Datei konnte nicht importiert werden. Bitte verwende eine gültige JSON-Exportdatei.");
+  }
+}
+
 function saveEntryFromRow(entryId) {
   const entry = state.entries.find((currentEntry) => currentEntry.id === entryId);
   if (!entry) {
@@ -572,6 +667,18 @@ function isEntryOnDate(entry, date) {
   return start.getFullYear() === date.getFullYear()
     && start.getMonth() === date.getMonth()
     && start.getDate() === date.getDate();
+}
+
+function isValidImportedState(candidate) {
+  if (!candidate || typeof candidate !== "object") {
+    return false;
+  }
+
+  if (!Array.isArray(candidate.projects) || !Array.isArray(candidate.entries)) {
+    return false;
+  }
+
+  return true;
 }
 
 function getSelectedRange() {

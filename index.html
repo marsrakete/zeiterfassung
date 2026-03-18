@@ -23,6 +23,7 @@
         <p class="hero-copy">Projekte anlegen, Zeiten live buchen, manuell nachtragen und als Excel-Datei exportieren.</p>
       </div>
       <div class="hero-actions">
+        <button id="settingsButton" class="secondary-button" type="button">Einstellungen</button>
         <button id="installButton" class="secondary-button" hidden>App installieren</button>
         <div class="status-card">
           <span class="status-label">Aktiv</span>
@@ -193,6 +194,29 @@
           <button class="secondary-button" value="cancel">Abbrechen</button>
           <button class="primary-button" type="submit">Speichern</button>
         </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog" class="confirm-dialog settings-dialog">
+    <form id="settingsForm" method="dialog" class="dialog-body">
+      <h3>Einstellungen</h3>
+      <div class="settings-copy">
+        <strong>Datenspeicherung</strong>
+        <p>Alle Projekte und Zeitblöcke werden lokal im Browser auf diesem Gerät gespeichert.</p>
+        <p>Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.</p>
+      </div>
+      <div class="settings-actions">
+        <button id="exportDataButton" class="secondary-button" type="button">App-Daten exportieren</button>
+        <button id="importDataButton" class="secondary-button" type="button">App-Daten importieren</button>
+        <input id="importDataInput" type="file" accept="application/json" hidden>
+      </div>
+      <div class="settings-copy">
+        <strong>Gerätewechsel</strong>
+        <p>Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="primary-button" value="close">Schließen</button>
       </div>
     </form>
   </dialog>

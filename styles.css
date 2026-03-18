@@ -331,6 +331,26 @@ th {
   align-items: center;
 }
 
+.settings-dialog {
+  max-width: 520px;
+}
+
+.settings-copy {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.settings-copy strong {
+  color: var(--text);
+}
+
+.settings-actions {
+  display: grid;
+  gap: 10px;
+}
+
 @media (max-width: 1000px) {
   .panel { grid-column: span 6; }
 }

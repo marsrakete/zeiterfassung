@@ -17,6 +17,17 @@ Die App ist bewusst einfach gehalten:
 
 Alle Daten werden lokal im Browser gespeichert. Es wird kein Server und keine Datenbank benötigt.
 
+## Datenspeicherung
+
+Die App speichert ihre Daten lokal im Browser auf dem jeweiligen Gerät.
+
+- Speicherort: `localStorage` des verwendeten Browsers
+- Gespeichert werden: Projekte, Zeitblöcke und ein eventuell aktuell laufendes Projekt
+- Speicherdauer: grundsätzlich unbegrenzt, bis die Daten gelöscht, durch einen Import ersetzt oder der Browser-Speicher manuell entfernt wird
+- Die Daten werden nicht automatisch mit anderen Geräten synchronisiert
+
+Für einen Gerätewechsel oder eine Sicherung gibt es deshalb einen eigenen Datenexport und -import in den Einstellungen.
+
 ## Schnellstart
 
 Im Projektordner ausführen:
@@ -89,7 +100,16 @@ Exportierbar sind:
 - aktueller Monat
 - frei wählbarer Monat
 
-Die Exportdatei wird als `.xls` erzeugt und kann direkt in Excel geöffnet werden.
+Die Exportdatei wird als `.xls` erzeugt und über die Teilen-Funktion des Geräts oder Browsers angeboten. Dadurch kann sie direkt an E-Mail, Messenger oder andere kompatible Apps übergeben werden. Falls die Teilen-Funktion nicht verfügbar ist, wird automatisch ein normaler Download verwendet.
+
+### 7. App-Daten übertragen
+
+Im Bereich `Einstellungen` gibt es zusätzlich:
+
+- `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
+- `App-Daten importieren`: ersetzt die aktuell gespeicherten Daten durch eine zuvor exportierte JSON-Datei
+
+Damit lassen sich Daten auf ein anderes Gerät übertragen oder als Sicherung aufbewahren.
 
 ## PWA und Offline-Nutzung
 
@@ -105,13 +125,14 @@ Die Anwendung kann in unterstützten Browsern installiert werden.
 - Es gibt keine automatische Cloud-Synchronisation
 - Daten bleiben an das jeweilige Gerät und Browserprofil gebunden
 
-Für wichtige Daten empfiehlt sich ein regelmäßiger Excel-Export.
+Für wichtige Daten empfiehlt sich zusätzlich ein regelmäßiger Export der App-Daten als JSON-Datei.
 
 ## Dateien
 
 - [index.html](C:/Users/millenseer/OneDrive%20-%20conet.de/Projekte/zeiterfassung/index.html): Oberfläche
 - [styles.css](C:/Users/millenseer/OneDrive%20-%20conet.de/Projekte/zeiterfassung/styles.css): Layout und Design
 - [app.js](C:/Users/millenseer/OneDrive%20-%20conet.de/Projekte/zeiterfassung/app.js): Logik, Speicherung und Export
+- [README.md](C:/Users/millenseer/OneDrive%20-%20conet.de/Projekte/zeiterfassung/README.md): Dokumentation
 - [manifest.webmanifest](C:/Users/millenseer/OneDrive%20-%20conet.de/Projekte/zeiterfassung/manifest.webmanifest): PWA-Metadaten
 - [service-worker.js](C:/Users/millenseer/OneDrive%20-%20conet.de/Projekte/zeiterfassung/service-worker.js): Offline-Cache
 - [start-server.ps1](C:/Users/millenseer/OneDrive%20-%20conet.de/Projekte/zeiterfassung/start-server.ps1): Lokaler Start unter Windows
@@ -120,4 +141,5 @@ Für wichtige Daten empfiehlt sich ein regelmäßiger Excel-Export.
 
 - Beim Löschen eines Projekts werden auch alle zugehörigen Zeitblöcke entfernt
 - Der Excel-Export enthält Einzelzeilen und Projektsummen
+- Der Import von App-Daten ersetzt den aktuellen lokalen Datenbestand vollständig
 - Die App benötigt keinen Build-Prozess und kann direkt als statische Webanwendung betrieben werden
