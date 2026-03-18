@@ -11,8 +11,9 @@ Die App ist bewusst einfach gehalten:
 - Projekte anlegen, starten, stoppen und löschen
 - Zeitblöcke manuell erfassen
 - Zeitblöcke kompakt in einer Übersicht anzeigen
+- Zeitanteile visuell als Balken- oder Tortendiagramm darstellen
 - Zeitblöcke im Editor-Dialog bearbeiten oder löschen
-- Zeitdaten als Excel-Datei exportieren
+- Zeitdaten als Excel-Datei, CSV oder Monatsbericht exportieren
 - Offline nutzbar als installierbare PWA
 
 Alle Daten werden lokal im Browser gespeichert. Es wird kein Server und keine Datenbank benötigt.
@@ -54,6 +55,8 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 - In der Projektverwaltung werden nur die Zeitblöcke des aktuellen Tages je Projekt berücksichtigt
 - Laufende Projekte bleiben sichtbar und als aktiv markiert
 - Die Reihenfolge der Projekte kann per Drag-and-drop direkt in der Liste geändert werden
+- Für Touch-Geräte gibt es zusätzlich Verschieben-Buttons nach oben und unten
+- Eine Suche und Filter für aktive, heutige oder noch ungebuchte Projekte helfen bei vielen Projekten
 - Projekte können umbenannt und ihre Notizen bearbeitet werden
 
 ### 2. Zeiten live buchen
@@ -84,8 +87,18 @@ Die Übersicht ist absichtlich kompakt und zeigt nur:
 Über den `Editor` öffnet sich ein Dialog zum Bearbeiten des ausgewählten Zeitblocks.
 
 Projekt-Notizen werden in der Projektkachel gekürzt angezeigt und lassen sich per Klick vollständig im Popup lesen.
+Zeitblöcke lassen sich außerdem nach Zeit, Projekt oder Dauer sortieren und werden in Tagesgruppen angezeigt.
 
-### 5. Zeitblöcke bearbeiten
+### 5. Statistik anzeigen
+
+Die Statistik zeigt die Verteilung der gebuchten Zeit pro Projekt.
+
+- umschaltbar zwischen Balkendiagramm und Tortendiagramm
+- Zeitraum wählbar für heute, diese Woche oder diesen Monat
+- Mouse-Over-Tooltip mit Projektname und Dauer
+- Legende mit Farbzuordnung und Dauer
+
+### 6. Zeitblöcke bearbeiten
 
 Im Editor-Dialog lassen sich:
 
@@ -97,7 +110,7 @@ Im Editor-Dialog lassen sich:
 
 Zusätzlich können alle Zeitblöcke gesammelt mit Sicherheitsabfrage gelöscht werden.
 
-### 6. Daten & Export
+### 7. Daten & Export
 
 Exportierbar sind:
 
@@ -106,13 +119,20 @@ Exportierbar sind:
 - aktueller Monat
 - frei wählbarer Monat
 
-Die Exportdatei wird als `.xls` erzeugt und über die Teilen-Funktion des Geräts oder Browsers angeboten. Dadurch kann sie direkt an E-Mail, Messenger oder andere kompatible Apps übergeben werden. Falls die Teilen-Funktion nicht verfügbar ist, wird automatisch ein normaler Download verwendet.
+Verfügbare Formate:
 
-### 7. App-Daten übertragen
+- Excel
+- CSV
+- Monatsbericht als HTML-Datei mit Tagesabschnitten und Projektsummen
+
+Die Exportdateien werden über die Teilen-Funktion des Geräts oder Browsers angeboten. Dadurch können sie direkt an E-Mail, Messenger oder andere kompatible Apps übergeben werden. Falls die Teilen-Funktion nicht verfügbar ist, wird automatisch ein normaler Download verwendet.
+
+### 8. App-Daten übertragen
 
 Im Bereich `Daten & Export` gibt es zusätzlich:
 
 - eine Rundungseinstellung für das Ausbuchen auf 5, 10 oder 15 Minuten
+- einen Backup-Status mit Hinweis auf das letzte exportierte App-Daten-Backup
 - `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
 - `App-Daten importieren`: ersetzt die aktuell gespeicherten Daten durch eine zuvor exportierte JSON-Datei
 
@@ -148,5 +168,6 @@ Für wichtige Daten empfiehlt sich zusätzlich ein regelmäßiger Export der App
 
 - Beim Löschen eines Projekts werden auch alle zugehörigen Zeitblöcke entfernt
 - Der Excel-Export enthält Einzelzeilen und Projektsummen
+- CSV und Monatsbericht stehen zusätzlich als Exportformate zur Verfügung
 - Der Import von App-Daten ersetzt den aktuellen lokalen Datenbestand vollständig
 - Die App benötigt keinen Build-Prozess und kann direkt als statische Webanwendung betrieben werden

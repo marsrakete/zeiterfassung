@@ -21,6 +21,7 @@
         <p class="eyebrow">Progressive Web App</p>
         <h1>Projekt-Zeiterfassung</h1>
         <p class="hero-copy">Projekte anlegen, Zeiten live buchen, manuell nachtragen und als Excel-Datei exportieren.</p>
+        <p id="roundingNotice" class="rounding-notice" hidden></p>
       </div>
       <div class="hero-actions">
         <button id="settingsButton" class="secondary-button" type="button">Daten & Export</button>
@@ -39,6 +40,21 @@
             <p class="section-kicker">Projekte</p>
             <h2>Projektverwaltung</h2>
           </div>
+        </div>
+        <div class="project-toolbar">
+          <label>
+            <span>Suche</span>
+            <input id="projectSearchInput" type="search" placeholder="Projekt suchen">
+          </label>
+          <label>
+            <span>Filter</span>
+            <select id="projectFilterSelect">
+              <option value="all">Alle</option>
+              <option value="active">Aktiv</option>
+              <option value="today">Heute gebucht</option>
+              <option value="empty">Heute ohne Buchung</option>
+            </select>
+          </label>
         </div>
         <div id="projectsList" class="projects-list"></div>
         <form id="projectForm" class="stack-form project-create-form">
@@ -82,6 +98,37 @@
         </form>
       </section>
 
+      <section class="panel panel-chart">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">Statistik</p>
+            <h2>Projektverteilung</h2>
+          </div>
+        </div>
+        <div class="chart-toolbar">
+          <label>
+            <span>Zeitraum</span>
+            <select id="chartRangeSelect">
+              <option value="today">Heute</option>
+              <option value="week">Diese Woche</option>
+              <option value="month">Dieser Monat</option>
+            </select>
+          </label>
+          <label>
+            <span>Diagramm</span>
+            <select id="chartTypeSelect">
+              <option value="bar">Balkendiagramm</option>
+              <option value="pie">Tortendiagramm</option>
+            </select>
+          </label>
+        </div>
+        <div class="chart-card">
+          <div id="chartTooltip" class="chart-tooltip" hidden></div>
+          <svg id="statsChart" class="stats-chart" viewBox="0 0 640 320" role="img" aria-label="Projektstatistik"></svg>
+        </div>
+        <div id="chartLegend" class="chart-legend"></div>
+      </section>
+
       <section class="panel full-width">
         <div class="panel-header">
           <div>
@@ -104,6 +151,15 @@
           </div>
         </div>
         <div class="overview-actions">
+          <label>
+            <span>Sortierung</span>
+            <select id="entrySortSelect">
+              <option value="startDesc">Neueste zuerst</option>
+              <option value="startAsc">Älteste zuerst</option>
+              <option value="projectAsc">Projekt A-Z</option>
+              <option value="durationDesc">Längste Dauer</option>
+            </select>
+          </label>
           <button id="deleteAllEntriesButton" class="danger-button" type="button">Alle Blöcke löschen</button>
         </div>
 
@@ -173,11 +229,20 @@
         <strong>Datenspeicherung</strong>
         <p>Alle Projekte und Zeitblöcke werden lokal im Browser auf diesem Gerät gespeichert.</p>
         <p>Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.</p>
+        <p id="backupStatusText">Noch kein App-Daten-Backup erstellt.</p>
       </div>
       <div class="settings-copy">
-        <strong>Excel-Export</strong>
+        <strong>Datenexport</strong>
       </div>
       <form id="exportForm" class="stack-form">
+        <label>
+          <span>Format</span>
+          <select id="exportFormatSelect">
+            <option value="excel">Excel</option>
+            <option value="csv">CSV</option>
+            <option value="report">Monatsbericht (HTML)</option>
+          </select>
+        </label>
         <label>
           <span>Zeitraum</span>
           <select id="exportRangeType">
@@ -199,7 +264,7 @@
           <span>Monat</span>
           <input id="exportMonth" type="month">
         </label>
-        <button class="primary-button" type="submit">Excel exportieren</button>
+        <button class="primary-button" type="submit">Exportieren</button>
       </form>
       <div class="settings-actions">
         <label>

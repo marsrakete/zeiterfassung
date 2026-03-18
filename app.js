@@ -1,26 +1,37 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
 const APP_VERSION = "1.0.0";
+const DATA_SCHEMA_VERSION = 2;
 
 const state = loadState();
 
 let pendingConfirmation = null;
 let editingEntryId = null;
 let editingProjectId = null;
+let roundingNoticeTimeoutId = null;
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
   activeProjectName: document.querySelector("#activeProjectName"),
   activeTimer: document.querySelector("#activeTimer"),
+  roundingNotice: document.querySelector("#roundingNotice"),
   projectForm: document.querySelector("#projectForm"),
   projectNameInput: document.querySelector("#projectNameInput"),
   projectNoteInput: document.querySelector("#projectNoteInput"),
+  projectSearchInput: document.querySelector("#projectSearchInput"),
+  projectFilterSelect: document.querySelector("#projectFilterSelect"),
   projectsList: document.querySelector("#projectsList"),
   manualEntryForm: document.querySelector("#manualEntryForm"),
   manualProjectId: document.querySelector("#manualProjectId"),
   manualStart: document.querySelector("#manualStart"),
   manualEnd: document.querySelector("#manualEnd"),
   manualNote: document.querySelector("#manualNote"),
+  chartRangeSelect: document.querySelector("#chartRangeSelect"),
+  chartTypeSelect: document.querySelector("#chartTypeSelect"),
+  statsChart: document.querySelector("#statsChart"),
+  chartLegend: document.querySelector("#chartLegend"),
+  chartTooltip: document.querySelector("#chartTooltip"),
   exportForm: document.querySelector("#exportForm"),
+  exportFormatSelect: document.querySelector("#exportFormatSelect"),
   exportRangeType: document.querySelector("#exportRangeType"),
   exportDayField: document.querySelector("#exportDayField"),
   exportWeekField: document.querySelector("#exportWeekField"),
@@ -30,6 +41,7 @@ const elements = {
   exportMonth: document.querySelector("#exportMonth"),
   entriesTableBody: document.querySelector("#entriesTableBody"),
   deleteAllEntriesButton: document.querySelector("#deleteAllEntriesButton"),
+  entrySortSelect: document.querySelector("#entrySortSelect"),
   todayTotal: document.querySelector("#todayTotal"),
   weekTotal: document.querySelector("#weekTotal"),
   monthTotal: document.querySelector("#monthTotal"),
@@ -49,6 +61,7 @@ const elements = {
   settingsDialog: document.querySelector("#settingsDialog"),
   closeSettingsButton: document.querySelector("#closeSettingsButton"),
   roundingSelect: document.querySelector("#roundingSelect"),
+  backupStatusText: document.querySelector("#backupStatusText"),
   exportDataButton: document.querySelector("#exportDataButton"),
   importDataButton: document.querySelector("#importDataButton"),
   importDataInput: document.querySelector("#importDataInput"),
@@ -78,15 +91,7 @@ function loadState() {
     }
 
     const parsed = JSON.parse(raw);
-    return {
-      version: parsed.version || APP_VERSION,
-      projects: Array.isArray(parsed.projects) ? parsed.projects : [],
-      entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-      activeSession: parsed.activeSession || null,
-      settings: {
-        roundingMinutes: parsed.settings?.roundingMinutes || 5
-      }
-    };
+    return normalizeState(parsed);
   } catch {
     return createInitialState();
   }
@@ -94,12 +99,14 @@ function loadState() {
 
 function createInitialState() {
   return {
+    schemaVersion: DATA_SCHEMA_VERSION,
     version: APP_VERSION,
     projects: [],
     entries: [],
     activeSession: null,
     settings: {
-      roundingMinutes: 5
+      roundingMinutes: 5,
+      lastDataExportAt: null
     }
   };
 }
@@ -109,13 +116,13 @@ function saveState() {
 }
 
 function replaceState(nextState) {
-  state.version = nextState.version || APP_VERSION;
-  state.projects = Array.isArray(nextState.projects) ? nextState.projects : [];
-  state.entries = Array.isArray(nextState.entries) ? nextState.entries : [];
-  state.activeSession = nextState.activeSession || null;
-  state.settings = {
-    roundingMinutes: nextState.settings?.roundingMinutes || 5
-  };
+  const normalized = normalizeState(nextState);
+  state.schemaVersion = normalized.schemaVersion;
+  state.version = normalized.version;
+  state.projects = normalized.projects;
+  state.entries = normalized.entries;
+  state.activeSession = normalized.activeSession;
+  state.settings = normalized.settings;
   saveState();
 }
 
@@ -153,9 +160,14 @@ function initializeDefaults() {
 
 function bindEvents() {
   elements.projectForm.addEventListener("submit", handleProjectSubmit);
+  elements.projectSearchInput.addEventListener("input", renderProjects);
+  elements.projectFilterSelect.addEventListener("change", renderProjects);
   elements.manualEntryForm.addEventListener("submit", handleManualEntrySubmit);
+  elements.chartRangeSelect.addEventListener("change", renderChart);
+  elements.chartTypeSelect.addEventListener("change", renderChart);
   elements.exportForm.addEventListener("submit", handleExportSubmit);
   elements.exportRangeType.addEventListener("change", updateExportFields);
+  elements.entrySortSelect.addEventListener("change", renderEntries);
   elements.deleteAllEntriesButton.addEventListener("click", promptDeleteAllEntries);
   elements.entryEditorForm.addEventListener("submit", handleEntryEditorSubmit);
   elements.entryEditorDeleteButton.addEventListener("click", handleEntryEditorDelete);
@@ -251,9 +263,26 @@ async function handleExportSubmit(event) {
 
   const range = getSelectedRange();
   const rows = buildExportRows(range.start, range.end);
+  const format = elements.exportFormatSelect.value;
 
   if (!rows.length) {
     alert("Im gewählten Zeitraum wurden keine abgeschlossenen Zeitblöcke gefunden.");
+    return;
+  }
+
+  if (format === "csv") {
+    const csv = createCsv(rows);
+    const fileName = `zeiterfassung-${range.fileStamp}.csv`;
+    const file = new File([csv], fileName, { type: "text/csv;charset=utf-8" });
+    await shareOrDownloadFile(file, fileName, "Zeiterfassung exportieren");
+    return;
+  }
+
+  if (format === "report") {
+    const report = createMonthlyReportHtml(rows, range.label);
+    const fileName = `zeiterfassung-bericht-${range.fileStamp}.html`;
+    const file = new File([report], fileName, { type: "text/html;charset=utf-8" });
+    await shareOrDownloadFile(file, fileName, "Zeiterfassungsbericht exportieren");
     return;
   }
 
@@ -293,9 +322,11 @@ function updateActiveTimer() {
 
 function render() {
   elements.roundingSelect.value = String(getRoundingMinutes());
+  renderBackupStatus();
   renderProjects();
   renderManualProjectOptions();
   renderEntries();
+  renderChart();
   renderTotals();
   updateActiveTimer();
   updateExportFields();
@@ -304,15 +335,24 @@ function render() {
 
 function renderProjects() {
   elements.projectsList.innerHTML = "";
+  const filteredProjects = getFilteredProjects();
 
   if (!state.projects.length) {
     elements.projectsList.appendChild(elements.emptyStateTemplate.content.cloneNode(true));
     return;
   }
 
+  if (!filteredProjects.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = "<strong>Keine Projekte gefunden</strong><p>Die aktuelle Suche oder der Filter liefert keine Treffer.</p>";
+    elements.projectsList.appendChild(empty);
+    return;
+  }
+
   const fragment = document.createDocumentFragment();
 
-  for (const project of state.projects) {
+  for (const project of filteredProjects) {
     const active = state.activeSession?.projectId === project.id;
     const projectEntries = state.entries.filter((entry) => entry.projectId === project.id && isEntryOnDate(entry, new Date()));
     const projectTotalMs = projectEntries.reduce((sum, entry) => sum + getDurationMs(entry), 0);
@@ -341,6 +381,8 @@ function renderProjects() {
         <button class="secondary-button project-button" data-action="clock-out" data-project-id="${project.id}" ${active ? "" : "disabled"}>Ausbuchen</button>
       </div>
       <div class="project-secondary-actions">
+        <button class="secondary-button move-button" data-action="move-up" data-project-id="${project.id}" title="Projekt nach oben">↑</button>
+        <button class="secondary-button move-button" data-action="move-down" data-project-id="${project.id}" title="Projekt nach unten">↓</button>
         <button class="secondary-button project-button" data-action="edit" data-project-id="${project.id}">Bearbeiten</button>
         <button class="danger-button project-button" data-action="delete" data-project-id="${project.id}">Löschen</button>
       </div>
@@ -380,9 +422,7 @@ function renderManualProjectOptions() {
 function renderEntries() {
   elements.entriesTableBody.innerHTML = "";
 
-  const sortedEntries = [...state.entries]
-    .filter((entry) => entry.end)
-    .sort((left, right) => new Date(right.start) - new Date(left.start));
+  const sortedEntries = sortEntriesForDisplay(state.entries.filter((entry) => entry.end));
 
   if (!sortedEntries.length) {
     const row = document.createElement("tr");
@@ -391,7 +431,17 @@ function renderEntries() {
     return;
   }
 
+  let lastGroupLabel = null;
   for (const entry of sortedEntries) {
+    const groupLabel = formatEntryGroupLabel(entry.start);
+    if (groupLabel !== lastGroupLabel) {
+      const groupRow = document.createElement("tr");
+      groupRow.className = "group-row";
+      groupRow.innerHTML = `<td colspan="5" class="group-cell">${groupLabel}</td>`;
+      elements.entriesTableBody.appendChild(groupRow);
+      lastGroupLabel = groupLabel;
+    }
+
     const project = findProject(entry.projectId);
     const row = document.createElement("tr");
     row.dataset.entryId = entry.id;
@@ -408,6 +458,26 @@ function renderEntries() {
   elements.entriesTableBody.querySelectorAll("button[data-entry-action]").forEach((button) => {
     button.addEventListener("click", handleEntryActionClick);
   });
+}
+
+function renderChart() {
+  const data = getChartData();
+  elements.statsChart.innerHTML = "";
+  elements.chartLegend.innerHTML = "";
+  hideChartTooltip();
+
+  if (!data.length) {
+    elements.statsChart.innerHTML = '<text x="320" y="160" text-anchor="middle" fill="#6b5c4d" font-size="18">Keine Daten für den gewählten Zeitraum</text>';
+    return;
+  }
+
+  if (elements.chartTypeSelect.value === "pie") {
+    renderPieChart(data);
+  } else {
+    renderBarChart(data);
+  }
+
+  renderChartLegend(data);
 }
 
 function renderTotals() {
@@ -434,6 +504,14 @@ function handleProjectActionClick(event) {
 
   if (action === "edit") {
     openProjectEditor(projectId);
+  }
+
+  if (action === "move-up") {
+    moveProject(projectId, -1);
+  }
+
+  if (action === "move-down") {
+    moveProject(projectId, 1);
   }
 }
 
@@ -508,6 +586,20 @@ function handleProjectDragEnd() {
   });
 }
 
+function moveProject(projectId, direction) {
+  const index = state.projects.findIndex((project) => project.id === projectId);
+  const nextIndex = index + direction;
+
+  if (index === -1 || nextIndex < 0 || nextIndex >= state.projects.length) {
+    return;
+  }
+
+  const [project] = state.projects.splice(index, 1);
+  state.projects.splice(nextIndex, 0, project);
+  saveState();
+  render();
+}
+
 function handleEntryActionClick(event) {
   const { entryAction, entryId } = event.currentTarget.dataset;
 
@@ -524,7 +616,9 @@ function clockIn(projectId) {
   }
 
   if (state.activeSession) {
-    nowIso = finalizeActiveSession(nowIso, true);
+    const finalized = finalizeActiveSession(nowIso, true);
+    nowIso = finalized.endIso;
+    maybeShowRoundingNotice(finalized);
   }
 
   state.activeSession = { projectId, start: nowIso };
@@ -537,14 +631,15 @@ function clockOut(projectId) {
     return;
   }
 
-  finalizeActiveSession(new Date().toISOString(), true);
+  const finalized = finalizeActiveSession(new Date().toISOString(), true);
+  maybeShowRoundingNotice(finalized);
   saveState();
   render();
 }
 
 function finalizeActiveSession(endIso, shouldRound = false) {
   if (!state.activeSession) {
-    return endIso;
+    return { endIso, rounded: false };
   }
 
   const start = new Date(state.activeSession.start);
@@ -566,7 +661,11 @@ function finalizeActiveSession(endIso, shouldRound = false) {
   }
 
   state.activeSession = null;
-  return end.toISOString();
+  return {
+    endIso: end.toISOString(),
+    rounded: end.getTime() !== actualEnd.getTime(),
+    actualEndIso: actualEnd.toISOString()
+  };
 }
 
 function promptDeleteProject(projectId) {
@@ -688,7 +787,9 @@ async function exportAppData() {
     exportedAt: new Date().toISOString(),
     app: "Projekt-Zeiterfassung",
     version: APP_VERSION,
+    schemaVersion: DATA_SCHEMA_VERSION,
     data: {
+      schemaVersion: state.schemaVersion,
       version: state.version,
       projects: state.projects,
       entries: state.entries,
@@ -704,6 +805,9 @@ async function exportAppData() {
   );
 
   await shareOrDownloadFile(file, file.name, "Zeiterfassungsdaten exportieren");
+  state.settings.lastDataExportAt = new Date().toISOString();
+  saveState();
+  renderBackupStatus();
 }
 
 async function handleImportData(event) {
@@ -726,7 +830,7 @@ async function handleImportData(event) {
 
     openConfirmation({
       title: "Daten importieren?",
-      message: "Sollen die aktuell gespeicherten Daten durch die importierten Daten ersetzt werden?",
+      message: buildImportPreviewMessage(importedState),
       confirmLabel: "Ja, importieren",
       onConfirm: () => {
         replaceState(importedState);
@@ -840,6 +944,37 @@ function isValidImportedState(candidate) {
   return true;
 }
 
+function normalizeState(rawState) {
+  const fallback = createInitialState();
+  const projects = Array.isArray(rawState.projects) ? rawState.projects : [];
+  const entries = Array.isArray(rawState.entries) ? rawState.entries : [];
+
+  return {
+    schemaVersion: rawState.schemaVersion || DATA_SCHEMA_VERSION,
+    version: rawState.version || APP_VERSION,
+    projects: projects.map((project) => ({
+      id: project.id || createId(),
+      name: project.name || "Unbenanntes Projekt",
+      note: project.note || "",
+      createdAt: project.createdAt || new Date().toISOString()
+    })),
+    entries: entries.map((entry) => ({
+      id: entry.id || createId(),
+      projectId: entry.projectId,
+      start: entry.start,
+      end: entry.end,
+      type: entry.type || "Live",
+      note: entry.note || "",
+      createdAt: entry.createdAt || new Date().toISOString()
+    })),
+    activeSession: rawState.activeSession || null,
+    settings: {
+      roundingMinutes: rawState.settings?.roundingMinutes || fallback.settings.roundingMinutes,
+      lastDataExportAt: rawState.settings?.lastDataExportAt || null
+    }
+  };
+}
+
 function isProjectNameUnique(name, ignoreProjectId = null) {
   const normalized = normalizeProjectName(name);
   return !state.projects.some((project) => {
@@ -856,6 +991,225 @@ function normalizeProjectName(name) {
 
 function getRoundingMinutes() {
   return Number(state.settings?.roundingMinutes) || 5;
+}
+
+function renderBackupStatus() {
+  const lastExport = state.settings?.lastDataExportAt;
+
+  if (!lastExport) {
+    elements.backupStatusText.textContent = "Noch kein App-Daten-Backup erstellt.";
+    return;
+  }
+
+  const exportDate = new Date(lastExport);
+  const ageDays = Math.floor((Date.now() - exportDate.getTime()) / 86400000);
+  const prefix = ageDays > 7 ? "Backup älter als 7 Tage" : "Letztes App-Daten-Backup";
+  elements.backupStatusText.textContent = `${prefix}: ${formatDateTime(lastExport)}`;
+}
+
+function maybeShowRoundingNotice(finalized) {
+  if (!finalized?.rounded) {
+    return;
+  }
+
+  const roundedTo = formatDateTime(finalized.endIso);
+  elements.roundingNotice.textContent = `Auf ${getRoundingMinutes()} Minuten gerundet, Ende: ${roundedTo}`;
+  elements.roundingNotice.hidden = false;
+  clearTimeout(roundingNoticeTimeoutId);
+  roundingNoticeTimeoutId = setTimeout(() => {
+    elements.roundingNotice.hidden = true;
+  }, 5000);
+}
+
+function getChartData() {
+  const range = elements.chartRangeSelect.value;
+  const now = new Date();
+  let start;
+  let end;
+
+  if (range === "today") {
+    start = startOfDay(now);
+    end = endOfDay(now);
+  } else if (range === "week") {
+    start = startOfWeek(now);
+    end = endOfWeek(now);
+  } else {
+    start = startOfMonth(now);
+    end = endOfMonth(now);
+  }
+
+  const totals = new Map();
+
+  for (const entry of state.entries.filter((item) => item.end)) {
+    const clipped = clipEntryToRange(entry, start, end);
+    if (!clipped) {
+      continue;
+    }
+
+    const durationMs = getDurationMs(clipped);
+    const project = findProject(clipped.projectId);
+    const key = clipped.projectId;
+    const current = totals.get(key) || {
+      projectId: key,
+      name: project?.name || "Unbekanntes Projekt",
+      durationMs: 0
+    };
+    current.durationMs += durationMs;
+    totals.set(key, current);
+  }
+
+  const palette = ["#0f766e", "#d97706", "#2563eb", "#b45309", "#0f766e", "#be123c", "#4f46e5", "#15803d"];
+  return [...totals.values()]
+    .sort((left, right) => right.durationMs - left.durationMs)
+    .map((item, index) => ({
+      ...item,
+      color: palette[index % palette.length]
+    }));
+}
+
+function renderBarChart(data) {
+  const width = 640;
+  const height = 320;
+  const padding = { top: 24, right: 24, bottom: 60, left: 32 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const max = Math.max(...data.map((item) => item.durationMs), 1);
+  const barWidth = chartWidth / data.length;
+
+  data.forEach((item, index) => {
+    const barHeight = (item.durationMs / max) * chartHeight;
+    const x = padding.left + index * barWidth + 12;
+    const y = padding.top + (chartHeight - barHeight);
+    const rect = createSvgElement("rect", {
+      x,
+      y,
+      width: Math.max(barWidth - 24, 24),
+      height: barHeight,
+      rx: 10,
+      fill: item.color,
+      "data-tooltip": `${item.name}\n${formatDuration(item.durationMs)}`
+    });
+    attachTooltip(rect);
+    elements.statsChart.appendChild(rect);
+
+    const label = createSvgElement("text", {
+      x: x + Math.max(barWidth - 24, 24) / 2,
+      y: height - 24,
+      "text-anchor": "middle",
+      fill: "#6b5c4d",
+      "font-size": 12
+    });
+    label.textContent = truncateLabel(item.name, 14);
+    elements.statsChart.appendChild(label);
+  });
+}
+
+function renderPieChart(data) {
+  const cx = 220;
+  const cy = 160;
+  const radius = 110;
+  const total = data.reduce((sum, item) => sum + item.durationMs, 0) || 1;
+  let startAngle = -Math.PI / 2;
+
+  data.forEach((item) => {
+    const angle = (item.durationMs / total) * Math.PI * 2;
+    const endAngle = startAngle + angle;
+    const path = createSvgElement("path", {
+      d: describeArc(cx, cy, radius, startAngle, endAngle),
+      fill: item.color,
+      stroke: "#fffaf3",
+      "stroke-width": 2,
+      "data-tooltip": `${item.name}\n${formatDuration(item.durationMs)}`
+    });
+    attachTooltip(path);
+    elements.statsChart.appendChild(path);
+    startAngle = endAngle;
+  });
+
+  const centerText = createSvgElement("text", {
+    x: cx,
+    y: cy - 4,
+    "text-anchor": "middle",
+    fill: "#2d2218",
+    "font-size": 22,
+    "font-weight": 700
+  });
+  centerText.textContent = formatDuration(total);
+  elements.statsChart.appendChild(centerText);
+
+  const subText = createSvgElement("text", {
+    x: cx,
+    y: cy + 22,
+    "text-anchor": "middle",
+    fill: "#6b5c4d",
+    "font-size": 13
+  });
+  subText.textContent = "Gesamt";
+  elements.statsChart.appendChild(subText);
+}
+
+function renderChartLegend(data) {
+  for (const item of data) {
+    const entry = document.createElement("div");
+    entry.className = "legend-item";
+    entry.innerHTML = `
+      <span class="legend-swatch" style="background:${item.color}"></span>
+      <span class="legend-text">
+        <strong>${escapeHtml(item.name)}</strong>
+        <span>${formatDuration(item.durationMs)}</span>
+      </span>
+    `;
+    elements.chartLegend.appendChild(entry);
+  }
+}
+
+function attachTooltip(element) {
+  element.addEventListener("mousemove", (event) => {
+    const tooltip = element.getAttribute("data-tooltip");
+    if (!tooltip) {
+      return;
+    }
+    elements.chartTooltip.textContent = tooltip;
+    elements.chartTooltip.hidden = false;
+    elements.chartTooltip.style.left = `${event.offsetX + 24}px`;
+    elements.chartTooltip.style.top = `${event.offsetY + 24}px`;
+  });
+  element.addEventListener("mouseleave", hideChartTooltip);
+}
+
+function hideChartTooltip() {
+  elements.chartTooltip.hidden = true;
+}
+
+function createSvgElement(tagName, attributes) {
+  const element = document.createElementNS("http://www.w3.org/2000/svg", tagName);
+  for (const [key, value] of Object.entries(attributes)) {
+    element.setAttribute(key, String(value));
+  }
+  return element;
+}
+
+function truncateLabel(label, maxLength) {
+  return label.length > maxLength ? `${label.slice(0, maxLength - 1)}…` : label;
+}
+
+function describeArc(cx, cy, radius, startAngle, endAngle) {
+  const start = polarToCartesian(cx, cy, radius, endAngle);
+  const end = polarToCartesian(cx, cy, radius, startAngle);
+  const largeArcFlag = endAngle - startAngle <= Math.PI ? "0" : "1";
+  return [
+    "M", cx, cy,
+    "L", start.x, start.y,
+    "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y,
+    "Z"
+  ].join(" ");
+}
+
+function polarToCartesian(cx, cy, radius, angle) {
+  return {
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle)
+  };
 }
 
 function roundDateUp(date, minutes) {
@@ -895,6 +1249,145 @@ function applyManualTimeSuggestions() {
 
   elements.manualStart.value = toDateTimeLocalValue(roundedStart);
   elements.manualEnd.value = toDateTimeLocalValue(roundedEnd);
+}
+
+function getFilteredProjects() {
+  const search = elements.projectSearchInput.value.trim().toLocaleLowerCase("de-DE");
+  const filter = elements.projectFilterSelect.value;
+  const today = new Date();
+
+  return state.projects.filter((project) => {
+    const active = state.activeSession?.projectId === project.id;
+    const hasTodayEntries = state.entries.some((entry) => entry.projectId === project.id && isEntryOnDate(entry, today));
+    const matchesSearch = !search
+      || project.name.toLocaleLowerCase("de-DE").includes(search)
+      || (project.note || "").toLocaleLowerCase("de-DE").includes(search);
+
+    if (!matchesSearch) {
+      return false;
+    }
+
+    if (filter === "active") {
+      return active;
+    }
+
+    if (filter === "today") {
+      return hasTodayEntries;
+    }
+
+    if (filter === "empty") {
+      return !hasTodayEntries && !active;
+    }
+
+    return true;
+  });
+}
+
+function sortEntriesForDisplay(entries) {
+  const sort = elements.entrySortSelect.value;
+  const sorted = [...entries];
+
+  sorted.sort((left, right) => {
+    const leftProject = findProject(left.projectId)?.name || "";
+    const rightProject = findProject(right.projectId)?.name || "";
+    const leftDuration = getDurationMs(left);
+    const rightDuration = getDurationMs(right);
+
+    if (sort === "startAsc") {
+      return new Date(left.start) - new Date(right.start);
+    }
+
+    if (sort === "projectAsc") {
+      return leftProject.localeCompare(rightProject, "de") || (new Date(right.start) - new Date(left.start));
+    }
+
+    if (sort === "durationDesc") {
+      return rightDuration - leftDuration || (new Date(right.start) - new Date(left.start));
+    }
+
+    return new Date(right.start) - new Date(left.start);
+  });
+
+  return sorted;
+}
+
+function formatEntryGroupLabel(value) {
+  return new Intl.DateTimeFormat("de-DE", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  }).format(new Date(value));
+}
+
+function buildImportPreviewMessage(importedState) {
+  const projectCount = importedState.projects.length;
+  const entryCount = importedState.entries.length;
+  const rounding = importedState.settings?.roundingMinutes || 5;
+  return `Sollen die aktuellen Daten ersetzt werden?\n\nImport enthält:\n${projectCount} Projekte\n${entryCount} Zeitblöcke\nRundung: ${rounding} Minuten`;
+}
+
+function createCsv(rows) {
+  const headers = ["Datum", "Projekt", "Start", "Ende", "Dauer (h)", "Dauer (hh:mm)", "Typ", "Notiz"];
+  const lines = [
+    headers,
+    ...rows.map((row) => [row.date, row.project, row.start, row.end, row.durationHours, row.durationClock, row.type, row.note])
+  ];
+
+  return lines
+    .map((line) => line.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";"))
+    .join("\n");
+}
+
+function createMonthlyReportHtml(rows, label) {
+  const groupedByDay = new Map();
+  for (const row of rows) {
+    const items = groupedByDay.get(row.date) || [];
+    items.push(row);
+    groupedByDay.set(row.date, items);
+  }
+
+  const daySections = [...groupedByDay.entries()].map(([date, items]) => {
+    const totalHours = items.reduce((sum, item) => sum + Number.parseFloat(item.durationHours.replace(",", ".")), 0);
+    const list = items.map((item) => `<tr><td>${escapeHtml(item.project)}</td><td>${escapeHtml(item.start)}</td><td>${escapeHtml(item.end)}</td><td>${escapeHtml(item.durationClock)}</td><td>${escapeHtml(item.note || "—")}</td></tr>`).join("");
+    return `
+      <section>
+        <h2>${escapeHtml(date)}</h2>
+        <p>Tagessumme: ${escapeHtml(formatDuration(totalHours * 3600000))}</p>
+        <table>
+          <thead><tr><th>Projekt</th><th>Start</th><th>Ende</th><th>Dauer</th><th>Notiz</th></tr></thead>
+          <tbody>${list}</tbody>
+        </table>
+      </section>
+    `;
+  }).join("");
+
+  const projectSummary = summarizeRowsByProject(rows).map((item) => `<tr><td>${escapeHtml(item.project)}</td><td>${escapeHtml(item.durationClock)}</td><td>${escapeHtml(item.durationHours)}</td></tr>`).join("");
+
+  return `<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Zeiterfassungsbericht</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 32px; color: #2d2218; }
+    h1, h2 { margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { text-transform: uppercase; font-size: 12px; letter-spacing: 0.06em; color: #6b5c4d; }
+  </style>
+</head>
+<body>
+  <h1>Zeiterfassungsbericht</h1>
+  <p>Zeitraum: ${escapeHtml(label)}</p>
+  <h2>Summen pro Projekt</h2>
+  <table>
+    <thead><tr><th>Projekt</th><th>Dauer</th><th>Stunden</th></tr></thead>
+    <tbody>${projectSummary}</tbody>
+  </table>
+  ${daySections}
+</body>
+</html>`;
 }
 
 function getSelectedRange() {
