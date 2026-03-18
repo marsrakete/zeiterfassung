@@ -51,6 +51,7 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 - Neue Projekte werden unterhalb der Projektliste angelegt
 - In der Projektverwaltung werden nur die Zeitblöcke des aktuellen Tages je Projekt berücksichtigt
 - Laufende Projekte bleiben sichtbar und als aktiv markiert
+- Die Reihenfolge der Projekte kann per Drag-and-drop direkt in der Liste geändert werden
 
 ### 2. Zeiten live buchen
 

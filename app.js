@@ -301,8 +301,10 @@ function renderProjects() {
 
     const card = document.createElement("article");
     card.className = `project-card${active ? " active" : ""}`;
+    card.draggable = true;
+    card.dataset.projectId = project.id;
     card.innerHTML = `
-      <div class="project-topline">
+      <div class="project-header-row">
         <div>
           <div class="project-name">${escapeHtml(project.name)}</div>
           <div class="project-meta">
@@ -310,6 +312,7 @@ function renderProjects() {
             <span class="pill">Heute ${formatDuration(projectTotalMs)}</span>
           </div>
         </div>
+        <div class="drag-handle" aria-hidden="true" title="Projekt verschieben">⋮⋮</div>
       </div>
       <div class="project-actions">
         <button class="primary-button project-button" data-action="clock-in" data-project-id="${project.id}" ${active ? "disabled" : ""}>Einbuchen</button>
@@ -324,6 +327,7 @@ function renderProjects() {
   elements.projectsList.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", handleProjectActionClick);
   });
+  bindProjectSorting();
 }
 
 function renderManualProjectOptions() {
@@ -399,6 +403,64 @@ function handleProjectActionClick(event) {
   if (action === "delete") {
     promptDeleteProject(projectId);
   }
+}
+
+function bindProjectSorting() {
+  const cards = [...elements.projectsList.querySelectorAll(".project-card[data-project-id]")];
+
+  for (const card of cards) {
+    card.addEventListener("dragstart", handleProjectDragStart);
+    card.addEventListener("dragover", handleProjectDragOver);
+    card.addEventListener("dragleave", handleProjectDragLeave);
+    card.addEventListener("drop", handleProjectDrop);
+    card.addEventListener("dragend", handleProjectDragEnd);
+  }
+}
+
+function handleProjectDragStart(event) {
+  const projectId = event.currentTarget.dataset.projectId;
+  event.dataTransfer.setData("text/plain", projectId);
+  event.dataTransfer.effectAllowed = "move";
+  event.currentTarget.classList.add("dragging");
+}
+
+function handleProjectDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  event.currentTarget.classList.add("drag-over");
+}
+
+function handleProjectDragLeave(event) {
+  event.currentTarget.classList.remove("drag-over");
+}
+
+function handleProjectDrop(event) {
+  event.preventDefault();
+  const draggedProjectId = event.dataTransfer.getData("text/plain");
+  const targetProjectId = event.currentTarget.dataset.projectId;
+  event.currentTarget.classList.remove("drag-over");
+
+  if (!draggedProjectId || !targetProjectId || draggedProjectId === targetProjectId) {
+    return;
+  }
+
+  const fromIndex = state.projects.findIndex((project) => project.id === draggedProjectId);
+  const toIndex = state.projects.findIndex((project) => project.id === targetProjectId);
+
+  if (fromIndex === -1 || toIndex === -1) {
+    return;
+  }
+
+  const [movedProject] = state.projects.splice(fromIndex, 1);
+  state.projects.splice(toIndex, 0, movedProject);
+  saveState();
+  render();
+}
+
+function handleProjectDragEnd() {
+  elements.projectsList.querySelectorAll(".project-card").forEach((card) => {
+    card.classList.remove("dragging", "drag-over");
+  });
 }
 
 function handleEntryActionClick(event) {
