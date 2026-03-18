@@ -207,6 +207,7 @@ button:disabled {
 
 .projects-list {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -445,6 +446,9 @@ th {
 }
 
 @media (max-width: 1000px) {
+  .projects-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .panel,
   .panel-manual {
     grid-column: span 6;
@@ -460,6 +464,9 @@ th {
   .panel, .full-width { grid-column: 1 / -1; }
   .panel { padding: 18px; }
   h1 { max-width: none; }
+  .projects-list {
+    grid-template-columns: 1fr;
+  }
   .overview-actions {
     justify-content: stretch;
   }
