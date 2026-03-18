@@ -123,7 +123,7 @@ Verfügbare Formate:
 
 - Excel
 - CSV
-- Monatsbericht als HTML-Datei mit Tagesabschnitten und Projektsummen
+- HTML-Bericht mit Tagesabschnitten, Projektsummen und eingebetteter Statistik
 
 Die Exportdateien werden über die Teilen-Funktion des Geräts oder Browsers angeboten. Dadurch können sie direkt an E-Mail, Messenger oder andere kompatible Apps übergeben werden. Falls die Teilen-Funktion nicht verfügbar ist, wird automatisch ein normaler Download verwendet.
 
@@ -168,6 +168,7 @@ Für wichtige Daten empfiehlt sich zusätzlich ein regelmäßiger Export der App
 
 - Beim Löschen eines Projekts werden auch alle zugehörigen Zeitblöcke entfernt
 - Der Excel-Export enthält Einzelzeilen und Projektsummen
-- CSV und Monatsbericht stehen zusätzlich als Exportformate zur Verfügung
+- Der Excel-Export enthält zusätzlich ein Statistik-Blatt mit den aggregierten Projektwerten
+- CSV und ein HTML-Bericht stehen zusätzlich als Exportformate zur Verfügung
 - Der Import von App-Daten ersetzt den aktuellen lokalen Datenbestand vollständig
 - Die App benötigt keinen Build-Prozess und kann direkt als statische Webanwendung betrieben werden

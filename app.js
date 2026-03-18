@@ -1163,6 +1163,75 @@ function renderChartLegend(data) {
   }
 }
 
+function buildChartDataFromRows(rows) {
+  const totals = new Map();
+  for (const row of rows) {
+    const durationMs = Number.parseFloat(row.durationHours.replace(",", ".")) * 3600000;
+    const current = totals.get(row.project) || { name: row.project, durationMs: 0 };
+    current.durationMs += durationMs;
+    totals.set(row.project, current);
+  }
+
+  const palette = ["#0f766e", "#d97706", "#2563eb", "#b45309", "#0f766e", "#be123c", "#4f46e5", "#15803d"];
+  const total = [...totals.values()].reduce((sum, item) => sum + item.durationMs, 0) || 1;
+
+  return [...totals.values()]
+    .sort((left, right) => right.durationMs - left.durationMs)
+    .map((item, index) => ({
+      ...item,
+      color: palette[index % palette.length],
+      percent: `${((item.durationMs / total) * 100).toFixed(1).replace(".", ",")} %`
+    }));
+}
+
+function createChartSvgMarkup(data, type) {
+  if (!data.length) {
+    return "<p>Keine Statistikdaten vorhanden.</p>";
+  }
+
+  if (type === "pie") {
+    const total = data.reduce((sum, item) => sum + item.durationMs, 0) || 1;
+    let startAngle = -Math.PI / 2;
+    const paths = data.map((item) => {
+      const angle = (item.durationMs / total) * Math.PI * 2;
+      const endAngle = startAngle + angle;
+      const path = describeArc(220, 160, 110, startAngle, endAngle);
+      startAngle = endAngle;
+      return `<path d="${path}" fill="${item.color}" stroke="#fffaf3" stroke-width="2"></path>`;
+    }).join("");
+    return `<svg viewBox="0 0 640 320" width="100%" height="auto">${paths}<text x="220" y="156" text-anchor="middle" fill="#2d2218" font-size="22" font-weight="700">${formatDuration(total)}</text><text x="220" y="180" text-anchor="middle" fill="#6b5c4d" font-size="13">Gesamt</text></svg>`;
+  }
+
+  const width = 640;
+  const height = 320;
+  const padding = { top: 24, right: 24, bottom: 60, left: 32 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const max = Math.max(...data.map((item) => item.durationMs), 1);
+  const barWidth = chartWidth / data.length;
+
+  const bars = data.map((item, index) => {
+    const barHeight = (item.durationMs / max) * chartHeight;
+    const x = padding.left + index * barWidth + 12;
+    const y = padding.top + (chartHeight - barHeight);
+    return `
+      <rect x="${x}" y="${y}" width="${Math.max(barWidth - 24, 24)}" height="${barHeight}" rx="10" fill="${item.color}"></rect>
+      <text x="${x + Math.max(barWidth - 24, 24) / 2}" y="${height - 24}" text-anchor="middle" fill="#6b5c4d" font-size="12">${escapeXml(truncateLabel(item.name, 14))}</text>
+    `;
+  }).join("");
+
+  return `<svg viewBox="0 0 640 320" width="100%" height="auto">${bars}</svg>`;
+}
+
+function createChartLegendMarkup(data) {
+  return data.map((item) => `
+    <div class="legend-item">
+      <span class="swatch" style="background:${item.color}"></span>
+      <span><strong>${escapeHtml(item.name)}</strong><br>${formatDuration(item.durationMs)} (${item.percent})</span>
+    </div>
+  `).join("");
+}
+
 function attachTooltip(element) {
   element.addEventListener("mousemove", (event) => {
     const tooltip = element.getAttribute("data-tooltip");
@@ -1340,6 +1409,8 @@ function createCsv(rows) {
 }
 
 function createMonthlyReportHtml(rows, label) {
+  const chartData = buildChartDataFromRows(rows);
+  const chartSvg = createChartSvgMarkup(chartData, "bar");
   const groupedByDay = new Map();
   for (const row of rows) {
     const items = groupedByDay.get(row.date) || [];
@@ -1372,6 +1443,10 @@ function createMonthlyReportHtml(rows, label) {
   <style>
     body { font-family: Segoe UI, sans-serif; margin: 32px; color: #2d2218; }
     h1, h2 { margin-bottom: 12px; }
+    .chart-wrap { margin: 24px 0 32px; padding: 16px; border: 1px solid #ddd; border-radius: 18px; background: #fffaf4; }
+    .legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+    .legend-item { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid #ddd; border-radius: 12px; }
+    .swatch { width: 14px; height: 14px; border-radius: 999px; flex: 0 0 auto; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
     th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
     th { text-transform: uppercase; font-size: 12px; letter-spacing: 0.06em; color: #6b5c4d; }
@@ -1386,9 +1461,15 @@ function createMonthlyReportHtml(rows, label) {
     <tbody>${projectSummary}</tbody>
   </table>
   ${daySections}
+  <div class="chart-wrap">
+    <h2>Statistik</h2>
+    ${chartSvg}
+    <div class="legend">${createChartLegendMarkup(chartData)}</div>
+  </div>
 </body>
 </html>`;
 }
+
 
 function getSelectedRange() {
   const type = elements.exportRangeType.value;
@@ -1475,6 +1556,7 @@ function clipEntryToRange(entry, rangeStart, rangeEnd) {
 
 function createSpreadsheetXml(rows, label) {
   const totalHours = rows.reduce((sum, row) => sum + Number.parseFloat(row.durationHours.replace(",", ".")), 0);
+  const chartData = buildChartDataFromRows(rows);
   const dataRows = rows.map((row) => `
     <Row>
       <Cell><Data ss:Type="String">${escapeXml(row.date)}</Data></Cell>
@@ -1492,6 +1574,14 @@ function createSpreadsheetXml(rows, label) {
       <Cell><Data ss:Type="String">${escapeXml(item.project)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(item.durationClock)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(item.durationHours)}</Data></Cell>
+    </Row>`).join("");
+
+  const statisticRows = chartData.map((item) => `
+    <Row>
+      <Cell><Data ss:Type="String">${escapeXml(item.name)}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(formatDuration(item.durationMs))}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml((item.durationMs / 3600000).toFixed(2).replace(".", ","))}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(item.percent)}</Data></Cell>
     </Row>`).join("");
 
   return `<?xml version="1.0"?>
@@ -1532,6 +1622,17 @@ function createSpreadsheetXml(rows, label) {
         <Cell><Data ss:Type="String">${escapeXml(formatDuration(totalHours * 3600000))}</Data></Cell>
         <Cell><Data ss:Type="String">${escapeXml(totalHours.toFixed(2).replace(".", ","))}</Data></Cell>
       </Row>
+    </Table>
+  </Worksheet>
+  <Worksheet ss:Name="Statistik">
+    <Table>
+      <Row>
+        <Cell><Data ss:Type="String">Projekt</Data></Cell>
+        <Cell><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
+        <Cell><Data ss:Type="String">Dauer (h)</Data></Cell>
+        <Cell><Data ss:Type="String">Anteil</Data></Cell>
+      </Row>
+      ${statisticRows}
     </Table>
   </Worksheet>
 </Workbook>`;
