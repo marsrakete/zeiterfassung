@@ -548,9 +548,10 @@ function finalizeActiveSession(endIso, shouldRound = false) {
   }
 
   const start = new Date(state.activeSession.start);
+  const actualEnd = new Date(endIso);
   const end = shouldRound
-    ? roundDateUp(new Date(endIso), getRoundingMinutes())
-    : new Date(endIso);
+    ? roundSessionEndUp(start, actualEnd, getRoundingMinutes())
+    : actualEnd;
 
   if (end > start) {
     state.entries.unshift({
@@ -871,6 +872,15 @@ function roundDateDown(date, minutes) {
   const stepMs = minutes * 60 * 1000;
   rounded.setTime(Math.floor(rounded.getTime() / stepMs) * stepMs);
   return rounded;
+}
+
+function roundSessionEndUp(start, end, minutes) {
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  const stepMs = minutes * 60 * 1000;
+  const durationMs = Math.max(endMs - startMs, 0);
+  const roundedDurationMs = Math.ceil(durationMs / stepMs) * stepMs;
+  return new Date(startMs + roundedDurationMs);
 }
 
 function applyManualTimeSuggestions() {
