@@ -92,7 +92,7 @@ Im Editor-Dialog lassen sich:
 
 Zusätzlich können alle Zeitblöcke gesammelt mit Sicherheitsabfrage gelöscht werden.
 
-### 6. Export nach Excel
+### 6. Daten & Export
 
 Exportierbar sind:
 
@@ -105,7 +105,7 @@ Die Exportdatei wird als `.xls` erzeugt und über die Teilen-Funktion des Gerät
 
 ### 7. App-Daten übertragen
 
-Im Bereich `Einstellungen` gibt es zusätzlich:
+Im Bereich `Daten & Export` gibt es zusätzlich:
 
 - `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
 - `App-Daten importieren`: ersetzt die aktuell gespeicherten Daten durch eine zuvor exportierte JSON-Datei

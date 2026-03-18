@@ -23,7 +23,7 @@
         <p class="hero-copy">Projekte anlegen, Zeiten live buchen, manuell nachtragen und als Excel-Datei exportieren.</p>
       </div>
       <div class="hero-actions">
-        <button id="settingsButton" class="secondary-button" type="button">Einstellungen</button>
+        <button id="settingsButton" class="secondary-button" type="button">Daten & Export</button>
         <button id="installButton" class="secondary-button" hidden>App installieren</button>
         <div class="status-card">
           <span class="status-label">Aktiv</span>
@@ -78,39 +78,6 @@
             <input id="manualNote" type="text" maxlength="120" placeholder="Optional">
           </label>
           <button class="primary-button" type="submit">Zeitblock speichern</button>
-        </form>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <div>
-            <p class="section-kicker">Export</p>
-            <h2>Excel-Export</h2>
-          </div>
-        </div>
-        <form id="exportForm" class="stack-form">
-          <label>
-            <span>Zeitraum</span>
-            <select id="exportRangeType">
-              <option value="day">Tag</option>
-              <option value="week">Woche</option>
-              <option value="currentMonth">Aktueller Monat</option>
-              <option value="customMonth">Anderer Monat</option>
-            </select>
-          </label>
-          <label id="exportDayField">
-            <span>Tag</span>
-            <input id="exportDay" type="date">
-          </label>
-          <label id="exportWeekField" hidden>
-            <span>Woche</span>
-            <input id="exportWeek" type="week">
-          </label>
-          <label id="exportMonthField" hidden>
-            <span>Monat</span>
-            <input id="exportMonth" type="month">
-          </label>
-          <button class="primary-button" type="submit">Nach Excel exportieren</button>
         </form>
       </section>
 
@@ -199,13 +166,40 @@
   </dialog>
 
   <dialog id="settingsDialog" class="confirm-dialog settings-dialog">
-    <form id="settingsForm" method="dialog" class="dialog-body">
-      <h3>Einstellungen</h3>
+    <div id="settingsForm" class="dialog-body">
+      <h3>Daten & Export</h3>
       <div class="settings-copy">
         <strong>Datenspeicherung</strong>
         <p>Alle Projekte und Zeitblöcke werden lokal im Browser auf diesem Gerät gespeichert.</p>
         <p>Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.</p>
       </div>
+      <div class="settings-copy">
+        <strong>Excel-Export</strong>
+      </div>
+      <form id="exportForm" class="stack-form">
+        <label>
+          <span>Zeitraum</span>
+          <select id="exportRangeType">
+            <option value="day">Tag</option>
+            <option value="week">Woche</option>
+            <option value="currentMonth">Aktueller Monat</option>
+            <option value="customMonth">Anderer Monat</option>
+          </select>
+        </label>
+        <label id="exportDayField">
+          <span>Tag</span>
+          <input id="exportDay" type="date">
+        </label>
+        <label id="exportWeekField" hidden>
+          <span>Woche</span>
+          <input id="exportWeek" type="week">
+        </label>
+        <label id="exportMonthField" hidden>
+          <span>Monat</span>
+          <input id="exportMonth" type="month">
+        </label>
+        <button class="primary-button" type="submit">Excel exportieren</button>
+      </form>
       <div class="settings-actions">
         <button id="exportDataButton" class="secondary-button" type="button">App-Daten exportieren</button>
         <button id="importDataButton" class="secondary-button" type="button">App-Daten importieren</button>
@@ -216,9 +210,9 @@
         <p>Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
       </div>
       <div class="dialog-actions">
-        <button class="primary-button" value="close">Schließen</button>
+        <button id="closeSettingsButton" class="primary-button" type="button">Schließen</button>
       </div>
-    </form>
+    </div>
   </dialog>
 
   <template id="emptyStateTemplate">

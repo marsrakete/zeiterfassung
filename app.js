@@ -46,6 +46,7 @@ const elements = {
   entryEditorNote: document.querySelector("#entryEditorNote"),
   entryEditorDeleteButton: document.querySelector("#entryEditorDeleteButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
+  closeSettingsButton: document.querySelector("#closeSettingsButton"),
   exportDataButton: document.querySelector("#exportDataButton"),
   importDataButton: document.querySelector("#importDataButton"),
   importDataInput: document.querySelector("#importDataInput"),
@@ -145,6 +146,9 @@ function bindEvents() {
   });
   elements.settingsButton.addEventListener("click", () => {
     elements.settingsDialog.showModal();
+  });
+  elements.closeSettingsButton.addEventListener("click", () => {
+    elements.settingsDialog.close();
   });
   elements.exportDataButton.addEventListener("click", exportAppData);
   elements.importDataButton.addEventListener("click", () => {
