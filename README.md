@@ -49,9 +49,12 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 ### 1. Projekte verwalten
 
 - Neue Projekte werden unterhalb der Projektliste angelegt
+- Projektnamen müssen eindeutig sein; doppelte Namen werden nicht gespeichert
+- Projekte können Notizen erhalten
 - In der Projektverwaltung werden nur die Zeitblöcke des aktuellen Tages je Projekt berücksichtigt
 - Laufende Projekte bleiben sichtbar und als aktiv markiert
 - Die Reihenfolge der Projekte kann per Drag-and-drop direkt in der Liste geändert werden
+- Projekte können umbenannt und ihre Notizen bearbeitet werden
 
 ### 2. Zeiten live buchen
 
@@ -80,6 +83,8 @@ Die Übersicht ist absichtlich kompakt und zeigt nur:
 
 Über den `Editor` öffnet sich ein Dialog zum Bearbeiten des ausgewählten Zeitblocks.
 
+Projekt-Notizen werden in der Projektkachel gekürzt angezeigt und lassen sich per Klick vollständig im Popup lesen.
+
 ### 5. Zeitblöcke bearbeiten
 
 Im Editor-Dialog lassen sich:
@@ -107,6 +112,7 @@ Die Exportdatei wird als `.xls` erzeugt und über die Teilen-Funktion des Gerät
 
 Im Bereich `Daten & Export` gibt es zusätzlich:
 
+- eine Rundungseinstellung für das Ausbuchen auf 5, 10 oder 15 Minuten
 - `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
 - `App-Daten importieren`: ersetzt die aktuell gespeicherten Daten durch eine zuvor exportierte JSON-Datei
 
@@ -116,7 +122,7 @@ Damit lassen sich Daten auf ein anderes Gerät übertragen oder als Sicherung au
 
 Die Anwendung kann in unterstützten Browsern installiert werden.
 
-- Über den Button `App installieren` lässt sich die App als Anwendung hinzufügen
+- Die Installation erfolgt über die native Installationsfunktion des Browsers
 - Der Service Worker hält die statischen Dateien offline verfügbar
 - Nach der Installation wirkt die App wie eine eigenständige Desktop- oder Mobil-App
 

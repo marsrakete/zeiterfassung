@@ -29,7 +29,7 @@ body {
   padding: 32px 18px 48px;
 }
 
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 
 .background-shape {
   position: fixed;
@@ -134,7 +134,7 @@ h1 {
 }
 
 .panel {
-  grid-column: span 4;
+  grid-column: span 6;
   border-radius: var(--radius);
   padding: 24px;
 }
@@ -166,13 +166,18 @@ h1 {
   gap: 10px;
 }
 
-input, select {
+input, select, textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.8);
   color: var(--text);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 96px;
 }
 
 button {
@@ -207,6 +212,14 @@ button:disabled {
 
 .project-create-form {
   margin-top: 18px;
+}
+
+.panel-projects {
+  grid-column: 1 / -1;
+}
+
+.panel-manual {
+  grid-column: span 6;
 }
 
 .project-card {
@@ -263,6 +276,12 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.project-main {
+  display: grid;
+  gap: 10px;
+  flex: 1 1 auto;
+}
+
 .overview-actions {
   display: flex;
   justify-content: end;
@@ -287,6 +306,36 @@ button:disabled {
 
 .project-actions { justify-content: start; }
 .project-button { padding-inline: 14px; }
+
+.project-note-preview {
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+button.project-note-preview {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  font-weight: 400;
+}
+
+button.project-note-preview:hover {
+  transform: none;
+  color: var(--text);
+}
+
+.project-secondary-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 .stat-card {
   min-width: 120px;
@@ -384,8 +433,22 @@ th {
   gap: 10px;
 }
 
+.settings-actions label {
+  display: grid;
+  gap: 8px;
+}
+
+.note-dialog-text {
+  color: var(--muted);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
 @media (max-width: 1000px) {
-  .panel { grid-column: span 6; }
+  .panel,
+  .panel-manual {
+    grid-column: span 6;
+  }
 }
 
 @media (max-width: 760px) {

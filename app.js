@@ -3,17 +3,17 @@ const APP_VERSION = "1.0.0";
 
 const state = loadState();
 
-let beforeInstallPromptEvent = null;
 let pendingConfirmation = null;
 let editingEntryId = null;
+let editingProjectId = null;
 
 const elements = {
-  installButton: document.querySelector("#installButton"),
   settingsButton: document.querySelector("#settingsButton"),
   activeProjectName: document.querySelector("#activeProjectName"),
   activeTimer: document.querySelector("#activeTimer"),
   projectForm: document.querySelector("#projectForm"),
   projectNameInput: document.querySelector("#projectNameInput"),
+  projectNoteInput: document.querySelector("#projectNoteInput"),
   projectsList: document.querySelector("#projectsList"),
   manualEntryForm: document.querySelector("#manualEntryForm"),
   manualProjectId: document.querySelector("#manualProjectId"),
@@ -45,11 +45,22 @@ const elements = {
   entryEditorEnd: document.querySelector("#entryEditorEnd"),
   entryEditorNote: document.querySelector("#entryEditorNote"),
   entryEditorDeleteButton: document.querySelector("#entryEditorDeleteButton"),
+  entryEditorCancelButton: document.querySelector("#entryEditorCancelButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   closeSettingsButton: document.querySelector("#closeSettingsButton"),
+  roundingSelect: document.querySelector("#roundingSelect"),
   exportDataButton: document.querySelector("#exportDataButton"),
   importDataButton: document.querySelector("#importDataButton"),
   importDataInput: document.querySelector("#importDataInput"),
+  projectEditorDialog: document.querySelector("#projectEditorDialog"),
+  projectEditorForm: document.querySelector("#projectEditorForm"),
+  projectEditorId: document.querySelector("#projectEditorId"),
+  projectEditorName: document.querySelector("#projectEditorName"),
+  projectEditorNote: document.querySelector("#projectEditorNote"),
+  projectNoteDialog: document.querySelector("#projectNoteDialog"),
+  projectNoteDialogTitle: document.querySelector("#projectNoteDialogTitle"),
+  projectNoteDialogText: document.querySelector("#projectNoteDialogText"),
+  closeProjectNoteButton: document.querySelector("#closeProjectNoteButton"),
   emptyStateTemplate: document.querySelector("#emptyStateTemplate")
 };
 
@@ -71,7 +82,10 @@ function loadState() {
       version: parsed.version || APP_VERSION,
       projects: Array.isArray(parsed.projects) ? parsed.projects : [],
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-      activeSession: parsed.activeSession || null
+      activeSession: parsed.activeSession || null,
+      settings: {
+        roundingMinutes: parsed.settings?.roundingMinutes || 5
+      }
     };
   } catch {
     return createInitialState();
@@ -83,7 +97,10 @@ function createInitialState() {
     version: APP_VERSION,
     projects: [],
     entries: [],
-    activeSession: null
+    activeSession: null,
+    settings: {
+      roundingMinutes: 5
+    }
   };
 }
 
@@ -96,6 +113,9 @@ function replaceState(nextState) {
   state.projects = Array.isArray(nextState.projects) ? nextState.projects : [];
   state.entries = Array.isArray(nextState.entries) ? nextState.entries : [];
   state.activeSession = nextState.activeSession || null;
+  state.settings = {
+    roundingMinutes: nextState.settings?.roundingMinutes || 5
+  };
   saveState();
 }
 
@@ -127,10 +147,8 @@ function initializeDefaults() {
   elements.exportDay.value = toDateInputValue(now);
   elements.exportWeek.value = toWeekInputValue(now);
   elements.exportMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-  elements.manualStart.value = toDateTimeLocalValue(oneHourAgo);
-  elements.manualEnd.value = toDateTimeLocalValue(now);
+  elements.roundingSelect.value = String(getRoundingMinutes());
+  applyManualTimeSuggestions();
 }
 
 function bindEvents() {
@@ -141,6 +159,9 @@ function bindEvents() {
   elements.deleteAllEntriesButton.addEventListener("click", promptDeleteAllEntries);
   elements.entryEditorForm.addEventListener("submit", handleEntryEditorSubmit);
   elements.entryEditorDeleteButton.addEventListener("click", handleEntryEditorDelete);
+  elements.entryEditorCancelButton.addEventListener("click", () => {
+    elements.entryEditorDialog.close();
+  });
   elements.entryEditorDialog.addEventListener("close", () => {
     editingEntryId = null;
   });
@@ -150,41 +171,45 @@ function bindEvents() {
   elements.closeSettingsButton.addEventListener("click", () => {
     elements.settingsDialog.close();
   });
+  elements.roundingSelect.addEventListener("change", handleRoundingChange);
   elements.exportDataButton.addEventListener("click", exportAppData);
   elements.importDataButton.addEventListener("click", () => {
     elements.importDataInput.click();
   });
   elements.importDataInput.addEventListener("change", handleImportData);
-  elements.installButton.addEventListener("click", installApp);
+  elements.projectEditorForm.addEventListener("submit", handleProjectEditorSubmit);
+  elements.projectEditorDialog.addEventListener("close", () => {
+    editingProjectId = null;
+  });
+  elements.closeProjectNoteButton.addEventListener("click", () => {
+    elements.projectNoteDialog.close();
+  });
   elements.confirmDialog.addEventListener("close", handleDeleteDialogClose);
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    beforeInstallPromptEvent = event;
-    elements.installButton.hidden = false;
-  });
-
-  window.addEventListener("appinstalled", () => {
-    beforeInstallPromptEvent = null;
-    elements.installButton.hidden = true;
-  });
 }
 
 function handleProjectSubmit(event) {
   event.preventDefault();
   const name = elements.projectNameInput.value.trim();
+  const note = elements.projectNoteInput.value.trim();
 
   if (!name) {
     return;
   }
 
-  state.projects.unshift({
+  if (!isProjectNameUnique(name)) {
+    alert("Der Projektname ist bereits vergeben. Bitte wähle einen eindeutigen Namen.");
+    return;
+  }
+
+  state.projects.push({
     id: createId(),
     name,
+    note,
     createdAt: new Date().toISOString()
   });
 
   elements.projectNameInput.value = "";
+  elements.projectNoteInput.value = "";
   saveState();
   render();
 }
@@ -246,18 +271,6 @@ function updateExportFields() {
   elements.exportMonthField.hidden = type !== "customMonth";
 }
 
-function installApp() {
-  if (!beforeInstallPromptEvent) {
-    return;
-  }
-
-  beforeInstallPromptEvent.prompt();
-  beforeInstallPromptEvent.userChoice.finally(() => {
-    beforeInstallPromptEvent = null;
-    elements.installButton.hidden = true;
-  });
-}
-
 function startTicker() {
   updateActiveTimer();
   setInterval(updateActiveTimer, 1000);
@@ -279,6 +292,7 @@ function updateActiveTimer() {
 }
 
 function render() {
+  elements.roundingSelect.value = String(getRoundingMinutes());
   renderProjects();
   renderManualProjectOptions();
   renderEntries();
@@ -302,6 +316,9 @@ function renderProjects() {
     const active = state.activeSession?.projectId === project.id;
     const projectEntries = state.entries.filter((entry) => entry.projectId === project.id && isEntryOnDate(entry, new Date()));
     const projectTotalMs = projectEntries.reduce((sum, entry) => sum + getDurationMs(entry), 0);
+    const notePreview = project.note
+      ? `<button class="project-note-preview" type="button" data-project-note="${project.id}">${escapeHtml(project.note)}</button>`
+      : `<span class="project-note-preview">Keine Notiz hinterlegt</span>`;
 
     const card = document.createElement("article");
     card.className = `project-card${active ? " active" : ""}`;
@@ -309,18 +326,22 @@ function renderProjects() {
     card.dataset.projectId = project.id;
     card.innerHTML = `
       <div class="project-header-row">
-        <div>
+        <div class="project-main">
           <div class="project-name">${escapeHtml(project.name)}</div>
           <div class="project-meta">
             <span class="pill">${active ? `Läuft seit ${formatDateTime(state.activeSession.start)}` : `${projectEntries.length} Zeitblock${projectEntries.length === 1 ? "" : "e"} heute`}</span>
             <span class="pill">Heute ${formatDuration(projectTotalMs)}</span>
           </div>
+          ${notePreview}
         </div>
         <div class="drag-handle" aria-hidden="true" title="Projekt verschieben">⋮⋮</div>
       </div>
       <div class="project-actions">
         <button class="primary-button project-button" data-action="clock-in" data-project-id="${project.id}" ${active ? "disabled" : ""}>Einbuchen</button>
         <button class="secondary-button project-button" data-action="clock-out" data-project-id="${project.id}" ${active ? "" : "disabled"}>Ausbuchen</button>
+      </div>
+      <div class="project-secondary-actions">
+        <button class="secondary-button project-button" data-action="edit" data-project-id="${project.id}">Bearbeiten</button>
         <button class="danger-button project-button" data-action="delete" data-project-id="${project.id}">Löschen</button>
       </div>
     `;
@@ -330,6 +351,9 @@ function renderProjects() {
   elements.projectsList.appendChild(fragment);
   elements.projectsList.querySelectorAll("button[data-action]").forEach((button) => {
     button.addEventListener("click", handleProjectActionClick);
+  });
+  elements.projectsList.querySelectorAll("button[data-project-note]").forEach((button) => {
+    button.addEventListener("click", handleProjectNoteClick);
   });
   bindProjectSorting();
 }
@@ -407,6 +431,23 @@ function handleProjectActionClick(event) {
   if (action === "delete") {
     promptDeleteProject(projectId);
   }
+
+  if (action === "edit") {
+    openProjectEditor(projectId);
+  }
+}
+
+function handleProjectNoteClick(event) {
+  const projectId = event.currentTarget.dataset.projectNote;
+  const project = findProject(projectId);
+
+  if (!project?.note) {
+    return;
+  }
+
+  elements.projectNoteDialogTitle.textContent = project.name;
+  elements.projectNoteDialogText.textContent = project.note;
+  elements.projectNoteDialog.showModal();
 }
 
 function bindProjectSorting() {
@@ -476,14 +517,14 @@ function handleEntryActionClick(event) {
 }
 
 function clockIn(projectId) {
-  const nowIso = new Date().toISOString();
+  let nowIso = new Date().toISOString();
 
   if (state.activeSession?.projectId === projectId) {
     return;
   }
 
   if (state.activeSession) {
-    finalizeActiveSession(nowIso);
+    nowIso = finalizeActiveSession(nowIso, true);
   }
 
   state.activeSession = { projectId, start: nowIso };
@@ -496,21 +537,23 @@ function clockOut(projectId) {
     return;
   }
 
-  finalizeActiveSession(new Date().toISOString());
+  finalizeActiveSession(new Date().toISOString(), true);
   saveState();
   render();
 }
 
-function finalizeActiveSession(endIso) {
+function finalizeActiveSession(endIso, shouldRound = false) {
   if (!state.activeSession) {
-    return;
+    return endIso;
   }
 
   const start = new Date(state.activeSession.start);
-  const end = new Date(endIso);
+  const end = shouldRound
+    ? roundDateUp(new Date(endIso), getRoundingMinutes())
+    : new Date(endIso);
 
   if (end > start) {
-      state.entries.unshift({
+    state.entries.unshift({
       id: createId(),
       projectId: state.activeSession.projectId,
       start: start.toISOString(),
@@ -522,6 +565,7 @@ function finalizeActiveSession(endIso) {
   }
 
   state.activeSession = null;
+  return end.toISOString();
 }
 
 function promptDeleteProject(projectId) {
@@ -592,6 +636,52 @@ function handleEntryEditorDelete() {
   promptDeleteEntry(editingEntryId);
 }
 
+function handleProjectEditorSubmit(event) {
+  event.preventDefault();
+
+  if (!editingProjectId) {
+    return;
+  }
+
+  const project = findProject(editingProjectId);
+  const name = elements.projectEditorName.value.trim();
+  const note = elements.projectEditorNote.value.trim();
+
+  if (!project || !name) {
+    return;
+  }
+
+  if (!isProjectNameUnique(name, editingProjectId)) {
+    alert("Der Projektname ist bereits vergeben. Bitte wähle einen eindeutigen Namen.");
+    return;
+  }
+
+  project.name = name;
+  project.note = note;
+  saveState();
+  elements.projectEditorDialog.close();
+  render();
+}
+
+function openProjectEditor(projectId) {
+  const project = findProject(projectId);
+  if (!project) {
+    return;
+  }
+
+  editingProjectId = projectId;
+  elements.projectEditorId.value = project.id;
+  elements.projectEditorName.value = project.name;
+  elements.projectEditorNote.value = project.note || "";
+  elements.projectEditorDialog.showModal();
+}
+
+function handleRoundingChange() {
+  state.settings.roundingMinutes = Number(elements.roundingSelect.value) || 5;
+  saveState();
+  applyManualTimeSuggestions();
+}
+
 async function exportAppData() {
   const payload = {
     exportedAt: new Date().toISOString(),
@@ -601,7 +691,8 @@ async function exportAppData() {
       version: state.version,
       projects: state.projects,
       entries: state.entries,
-      activeSession: state.activeSession
+      activeSession: state.activeSession,
+      settings: state.settings
     }
   };
 
@@ -639,6 +730,7 @@ async function handleImportData(event) {
       onConfirm: () => {
         replaceState(importedState);
         elements.settingsDialog.close();
+        applyManualTimeSuggestions();
         render();
       }
     });
@@ -745,6 +837,54 @@ function isValidImportedState(candidate) {
   }
 
   return true;
+}
+
+function isProjectNameUnique(name, ignoreProjectId = null) {
+  const normalized = normalizeProjectName(name);
+  return !state.projects.some((project) => {
+    if (ignoreProjectId && project.id === ignoreProjectId) {
+      return false;
+    }
+    return normalizeProjectName(project.name) === normalized;
+  });
+}
+
+function normalizeProjectName(name) {
+  return name.trim().toLocaleLowerCase("de-DE");
+}
+
+function getRoundingMinutes() {
+  return Number(state.settings?.roundingMinutes) || 5;
+}
+
+function roundDateUp(date, minutes) {
+  const rounded = new Date(date);
+  rounded.setSeconds(0, 0);
+  const stepMs = minutes * 60 * 1000;
+  rounded.setTime(Math.ceil(rounded.getTime() / stepMs) * stepMs);
+  return rounded;
+}
+
+function roundDateDown(date, minutes) {
+  const rounded = new Date(date);
+  rounded.setSeconds(0, 0);
+  const stepMs = minutes * 60 * 1000;
+  rounded.setTime(Math.floor(rounded.getTime() / stepMs) * stepMs);
+  return rounded;
+}
+
+function applyManualTimeSuggestions() {
+  const minutes = getRoundingMinutes();
+  const now = new Date();
+  const roundedEnd = roundDateUp(now, minutes);
+  const roundedStart = new Date(roundedEnd.getTime() - minutes * 60 * 1000);
+  const stepSeconds = minutes * 60;
+
+  elements.manualStart.step = String(stepSeconds);
+  elements.manualEnd.step = String(stepSeconds);
+
+  elements.manualStart.value = toDateTimeLocalValue(roundedStart);
+  elements.manualEnd.value = toDateTimeLocalValue(roundedEnd);
 }
 
 function getSelectedRange() {

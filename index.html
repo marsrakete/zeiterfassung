@@ -24,7 +24,6 @@
       </div>
       <div class="hero-actions">
         <button id="settingsButton" class="secondary-button" type="button">Daten & Export</button>
-        <button id="installButton" class="secondary-button" hidden>App installieren</button>
         <div class="status-card">
           <span class="status-label">Aktiv</span>
           <strong id="activeProjectName">Kein Projekt eingebucht</strong>
@@ -34,7 +33,7 @@
     </header>
 
     <section class="grid-layout">
-      <section class="panel">
+      <section class="panel panel-projects full-width">
         <div class="panel-header">
           <div>
             <p class="section-kicker">Projekte</p>
@@ -45,15 +44,17 @@
         <form id="projectForm" class="stack-form project-create-form">
           <label>
             <span>Neues Projekt</span>
-            <div class="inline-field">
-              <input id="projectNameInput" name="projectName" type="text" maxlength="60" placeholder="z. B. Kunde Website Relaunch" required>
-              <button class="primary-button" type="submit">Projekt anlegen</button>
-            </div>
+            <input id="projectNameInput" name="projectName" type="text" maxlength="60" placeholder="z. B. Kunde Website Relaunch" required>
           </label>
+          <label>
+            <span>Projektnotiz</span>
+            <textarea id="projectNoteInput" name="projectNote" rows="3" maxlength="500" placeholder="Optional"></textarea>
+          </label>
+          <button class="primary-button" type="submit">Projekt anlegen</button>
         </form>
       </section>
 
-      <section class="panel">
+      <section class="panel panel-manual">
         <div class="panel-header">
           <div>
             <p class="section-kicker">Zeiten</p>
@@ -158,7 +159,7 @@
       <div class="dialog-actions dialog-actions-spread">
         <button id="entryEditorDeleteButton" class="danger-button" type="button">Block löschen</button>
         <div class="dialog-actions">
-          <button class="secondary-button" value="cancel">Abbrechen</button>
+          <button id="entryEditorCancelButton" class="secondary-button" type="button">Abbrechen</button>
           <button class="primary-button" type="submit">Speichern</button>
         </div>
       </div>
@@ -201,6 +202,14 @@
         <button class="primary-button" type="submit">Excel exportieren</button>
       </form>
       <div class="settings-actions">
+        <label>
+          <span>Rundung beim Ausbuchen</span>
+          <select id="roundingSelect">
+            <option value="5">5 Minuten</option>
+            <option value="10">10 Minuten</option>
+            <option value="15">15 Minuten</option>
+          </select>
+        </label>
         <button id="exportDataButton" class="secondary-button" type="button">App-Daten exportieren</button>
         <button id="importDataButton" class="secondary-button" type="button">App-Daten importieren</button>
         <input id="importDataInput" type="file" accept="application/json" hidden>
@@ -211,6 +220,35 @@
       </div>
       <div class="dialog-actions">
         <button id="closeSettingsButton" class="primary-button" type="button">Schließen</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="projectEditorDialog" class="confirm-dialog">
+    <form id="projectEditorForm" method="dialog" class="dialog-body">
+      <h3>Projekt bearbeiten</h3>
+      <input id="projectEditorId" type="hidden">
+      <label>
+        <span>Projektname</span>
+        <input id="projectEditorName" type="text" maxlength="60" required>
+      </label>
+      <label>
+        <span>Projektnotiz</span>
+        <textarea id="projectEditorNote" rows="5" maxlength="500" placeholder="Optional"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button class="secondary-button" value="cancel">Abbrechen</button>
+        <button class="primary-button" type="submit">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="projectNoteDialog" class="confirm-dialog">
+    <div class="dialog-body">
+      <h3 id="projectNoteDialogTitle">Projektnotiz</h3>
+      <p id="projectNoteDialogText" class="note-dialog-text"></p>
+      <div class="dialog-actions">
+        <button id="closeProjectNoteButton" class="primary-button" type="button">Schließen</button>
       </div>
     </div>
   </dialog>
