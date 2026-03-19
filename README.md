@@ -9,7 +9,7 @@ Eine schlanke Progressive Web App zur Projekt-Zeiterfassung mit lokaler Speicher
 Die App ist bewusst einfach gehalten:
 
 - Projekte anlegen, starten, stoppen und löschen
-- Laufende Zeitblöcke direkt bearbeiten oder pausieren
+- Laufende Zeitblöcke direkt bearbeiten, stoppen und das zuletzt gestoppte Projekt fortsetzen
 - Zeitblöcke manuell erfassen
 - Zeitblöcke kompakt in einer Übersicht anzeigen
 - Zeitanteile visuell als Balken- oder Tortendiagramm darstellen
@@ -67,7 +67,8 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 - `Einbuchen` startet die Zeitmessung
 - Beim Wechsel auf ein anderes Projekt wird das bisher aktive Projekt automatisch beendet
 - `Ausbuchen` stoppt das aktuell laufende Projekt explizit
-- Laufende Zeitblöcke können direkt bearbeitet oder pausiert werden
+- Laufende Zeitblöcke können direkt bearbeitet oder gestoppt werden
+- Ein gestopptes Projekt kann danach über `Letztes Projekt fortsetzen` direkt wieder gestartet werden
 
 ### 3. Zeitblöcke manuell nachtragen
 

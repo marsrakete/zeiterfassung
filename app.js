@@ -36,6 +36,7 @@ const elements = {
   roundingNotice: document.querySelector("#roundingNotice"),
   editActiveSessionButton: document.querySelector("#editActiveSessionButton"),
   pauseActiveSessionButton: document.querySelector("#pauseActiveSessionButton"),
+  resumeLastProjectButton: document.querySelector("#resumeLastProjectButton"),
   newProjectButton: document.querySelector("#newProjectButton"),
   projectForm: document.querySelector("#projectForm"),
   projectNameInput: document.querySelector("#projectNameInput"),
@@ -150,6 +151,7 @@ function createInitialState() {
     projects: [],
     entries: [],
     activeSession: null,
+    lastStoppedSession: null,
     settings: {
       roundingMinutes: 5,
       lastDataExportAt: null,
@@ -170,6 +172,7 @@ function replaceState(nextState) {
   state.projects = normalized.projects;
   state.entries = normalized.entries;
   state.activeSession = normalized.activeSession;
+  state.lastStoppedSession = normalized.lastStoppedSession;
   state.settings = normalized.settings;
   saveState();
 }
@@ -235,6 +238,7 @@ function bindEvents() {
   });
   elements.editActiveSessionButton.addEventListener("click", openActiveSessionEditor);
   elements.pauseActiveSessionButton.addEventListener("click", pauseActiveSession);
+  elements.resumeLastProjectButton.addEventListener("click", resumeLastStoppedProject);
   elements.settingsButton.addEventListener("click", () => {
     elements.settingsDialog.showModal();
   });
@@ -424,8 +428,10 @@ function render() {
   updateExportFields();
   elements.deleteAllEntriesButton.disabled = !state.entries.length;
   const hasActiveSession = Boolean(state.activeSession);
+  const hasResumableProject = Boolean(findProject(state.lastStoppedSession?.projectId));
   elements.editActiveSessionButton.disabled = !hasActiveSession;
   elements.pauseActiveSessionButton.disabled = !hasActiveSession;
+  elements.resumeLastProjectButton.disabled = hasActiveSession || !hasResumableProject;
 }
 
 function renderProjects() {
@@ -810,6 +816,9 @@ function clockIn(projectId) {
   }
 
   state.activeSession = { projectId, start: nowIso };
+  if (state.lastStoppedSession?.projectId === projectId) {
+    state.lastStoppedSession = null;
+  }
   saveState();
   render();
 }
@@ -862,7 +871,26 @@ function pauseActiveSession() {
     return;
   }
 
+  state.lastStoppedSession = {
+    projectId: state.activeSession.projectId,
+    stoppedAt: new Date().toISOString()
+  };
   finalizeActiveSession(new Date().toISOString(), false);
+  saveState();
+  render();
+}
+
+function resumeLastStoppedProject() {
+  const lastProjectId = state.lastStoppedSession?.projectId;
+  if (!lastProjectId || !findProject(lastProjectId) || state.activeSession) {
+    return;
+  }
+
+  state.activeSession = {
+    projectId: lastProjectId,
+    start: new Date().toISOString()
+  };
+  state.lastStoppedSession = null;
   saveState();
   render();
 }
@@ -1208,6 +1236,7 @@ function normalizeState(rawState) {
       createdAt: entry.createdAt || new Date().toISOString()
     })),
     activeSession: rawState.activeSession || null,
+    lastStoppedSession: rawState.lastStoppedSession || null,
     settings: {
       roundingMinutes: rawState.settings?.roundingMinutes || fallback.settings.roundingMinutes,
       lastDataExportAt: rawState.settings?.lastDataExportAt || null,
