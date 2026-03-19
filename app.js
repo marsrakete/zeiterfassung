@@ -1,6 +1,24 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
 const APP_VERSION = "1.0.0";
-const DATA_SCHEMA_VERSION = 2;
+const DATA_SCHEMA_VERSION = 3;
+const PROJECT_COLOR_PALETTE = [
+  "#0f766e",
+  "#d97706",
+  "#2563eb",
+  "#b45309",
+  "#be123c",
+  "#4f46e5",
+  "#15803d",
+  "#0891b2",
+  "#dc2626",
+  "#7c3aed",
+  "#ca8a04",
+  "#0d9488",
+  "#ea580c",
+  "#1d4ed8",
+  "#4338ca",
+  "#65a30d"
+];
 
 const state = loadState();
 
@@ -8,15 +26,22 @@ let pendingConfirmation = null;
 let editingEntryId = null;
 let editingProjectId = null;
 let roundingNoticeTimeoutId = null;
+let touchDragProjectId = null;
+let touchDragTargetId = null;
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
   activeProjectName: document.querySelector("#activeProjectName"),
   activeTimer: document.querySelector("#activeTimer"),
   roundingNotice: document.querySelector("#roundingNotice"),
+  editActiveSessionButton: document.querySelector("#editActiveSessionButton"),
+  pauseActiveSessionButton: document.querySelector("#pauseActiveSessionButton"),
+  newProjectButton: document.querySelector("#newProjectButton"),
   projectForm: document.querySelector("#projectForm"),
   projectNameInput: document.querySelector("#projectNameInput"),
   projectNoteInput: document.querySelector("#projectNoteInput"),
+  projectColorInput: document.querySelector("#projectColorInput"),
+  projectColorPalette: document.querySelector("#projectColorPalette"),
   projectSearchInput: document.querySelector("#projectSearchInput"),
   projectFilterSelect: document.querySelector("#projectFilterSelect"),
   projectsList: document.querySelector("#projectsList"),
@@ -45,6 +70,13 @@ const elements = {
   todayTotal: document.querySelector("#todayTotal"),
   weekTotal: document.querySelector("#weekTotal"),
   monthTotal: document.querySelector("#monthTotal"),
+  dailyGoalStatus: document.querySelector("#dailyGoalStatus"),
+  weeklyGoalStatus: document.querySelector("#weeklyGoalStatus"),
+  calendarDetails: document.querySelector("#calendarDetails"),
+  calendarViewSelect: document.querySelector("#calendarViewSelect"),
+  calendarDateInput: document.querySelector("#calendarDateInput"),
+  calendarLegend: document.querySelector("#calendarLegend"),
+  calendarView: document.querySelector("#calendarView"),
   confirmDialog: document.querySelector("#confirmDialog"),
   confirmDialogTitle: document.querySelector("#confirmDialogTitle"),
   confirmDialogText: document.querySelector("#confirmDialogText"),
@@ -58,9 +90,19 @@ const elements = {
   entryEditorNote: document.querySelector("#entryEditorNote"),
   entryEditorDeleteButton: document.querySelector("#entryEditorDeleteButton"),
   entryEditorCancelButton: document.querySelector("#entryEditorCancelButton"),
+  activeSessionDialog: document.querySelector("#activeSessionDialog"),
+  activeSessionForm: document.querySelector("#activeSessionForm"),
+  activeSessionProjectId: document.querySelector("#activeSessionProjectId"),
+  activeSessionStart: document.querySelector("#activeSessionStart"),
+  activeSessionCancelButton: document.querySelector("#activeSessionCancelButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   closeSettingsButton: document.querySelector("#closeSettingsButton"),
   roundingSelect: document.querySelector("#roundingSelect"),
+  dailyGoalInput: document.querySelector("#dailyGoalInput"),
+  weeklyGoalInput: document.querySelector("#weeklyGoalInput"),
+  exportScopeSelect: document.querySelector("#exportScopeSelect"),
+  exportProjectField: document.querySelector("#exportProjectField"),
+  exportProjectSelect: document.querySelector("#exportProjectSelect"),
   backupStatusText: document.querySelector("#backupStatusText"),
   exportDataButton: document.querySelector("#exportDataButton"),
   importDataButton: document.querySelector("#importDataButton"),
@@ -70,10 +112,14 @@ const elements = {
   projectEditorId: document.querySelector("#projectEditorId"),
   projectEditorName: document.querySelector("#projectEditorName"),
   projectEditorNote: document.querySelector("#projectEditorNote"),
+  projectEditorColor: document.querySelector("#projectEditorColor"),
+  projectEditorColorPalette: document.querySelector("#projectEditorColorPalette"),
   projectNoteDialog: document.querySelector("#projectNoteDialog"),
   projectNoteDialogTitle: document.querySelector("#projectNoteDialogTitle"),
   projectNoteDialogText: document.querySelector("#projectNoteDialogText"),
   closeProjectNoteButton: document.querySelector("#closeProjectNoteButton"),
+  projectCreateDialog: document.querySelector("#projectCreateDialog"),
+  projectCreateCancelButton: document.querySelector("#projectCreateCancelButton"),
   emptyStateTemplate: document.querySelector("#emptyStateTemplate")
 };
 
@@ -106,7 +152,9 @@ function createInitialState() {
     activeSession: null,
     settings: {
       roundingMinutes: 5,
-      lastDataExportAt: null
+      lastDataExportAt: null,
+      dailyGoalHours: 8,
+      weeklyGoalHours: 40
     }
   };
 }
@@ -155,11 +203,15 @@ function initializeDefaults() {
   elements.exportWeek.value = toWeekInputValue(now);
   elements.exportMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   elements.roundingSelect.value = String(getRoundingMinutes());
+  elements.dailyGoalInput.value = String(getDailyGoalHours());
+  elements.weeklyGoalInput.value = String(getWeeklyGoalHours());
+  elements.calendarDateInput.value = toDateInputValue(now);
   applyManualTimeSuggestions();
 }
 
 function bindEvents() {
   elements.projectForm.addEventListener("submit", handleProjectSubmit);
+  elements.newProjectButton.addEventListener("click", openProjectCreateDialog);
   elements.projectSearchInput.addEventListener("input", renderProjects);
   elements.projectFilterSelect.addEventListener("change", renderProjects);
   elements.manualEntryForm.addEventListener("submit", handleManualEntrySubmit);
@@ -174,9 +226,15 @@ function bindEvents() {
   elements.entryEditorCancelButton.addEventListener("click", () => {
     elements.entryEditorDialog.close();
   });
+  elements.activeSessionForm.addEventListener("submit", handleActiveSessionSubmit);
+  elements.activeSessionCancelButton.addEventListener("click", () => {
+    elements.activeSessionDialog.close();
+  });
   elements.entryEditorDialog.addEventListener("close", () => {
     editingEntryId = null;
   });
+  elements.editActiveSessionButton.addEventListener("click", openActiveSessionEditor);
+  elements.pauseActiveSessionButton.addEventListener("click", pauseActiveSession);
   elements.settingsButton.addEventListener("click", () => {
     elements.settingsDialog.showModal();
   });
@@ -184,11 +242,21 @@ function bindEvents() {
     elements.settingsDialog.close();
   });
   elements.roundingSelect.addEventListener("change", handleRoundingChange);
+  elements.dailyGoalInput.addEventListener("change", handleGoalChange);
+  elements.weeklyGoalInput.addEventListener("change", handleGoalChange);
+  elements.exportScopeSelect.addEventListener("change", updateExportFields);
   elements.exportDataButton.addEventListener("click", exportAppData);
   elements.importDataButton.addEventListener("click", () => {
     elements.importDataInput.click();
   });
   elements.importDataInput.addEventListener("change", handleImportData);
+  elements.projectCreateCancelButton.addEventListener("click", () => {
+    elements.projectCreateDialog.close();
+  });
+  elements.projectCreateDialog.addEventListener("close", resetProjectCreateForm);
+  elements.calendarViewSelect.addEventListener("change", renderCalendar);
+  elements.calendarDateInput.addEventListener("change", renderCalendar);
+  elements.calendarDetails.addEventListener("toggle", handleCalendarToggle);
   elements.projectEditorForm.addEventListener("submit", handleProjectEditorSubmit);
   elements.projectEditorDialog.addEventListener("close", () => {
     editingProjectId = null;
@@ -203,6 +271,7 @@ function handleProjectSubmit(event) {
   event.preventDefault();
   const name = elements.projectNameInput.value.trim();
   const note = elements.projectNoteInput.value.trim();
+  const color = normalizeHexColor(elements.projectColorInput.value) || createProjectColor();
 
   if (!name) {
     return;
@@ -217,13 +286,30 @@ function handleProjectSubmit(event) {
     id: createId(),
     name,
     note,
+    color,
     createdAt: new Date().toISOString()
   });
 
+  resetProjectCreateForm();
+  saveState();
+  elements.projectCreateDialog.close();
+  render();
+}
+
+function openProjectCreateDialog() {
+  resetProjectCreateForm();
+  elements.projectCreateDialog.showModal();
+  window.requestAnimationFrame(() => {
+    elements.projectNameInput.focus();
+  });
+}
+
+function resetProjectCreateForm() {
   elements.projectNameInput.value = "";
   elements.projectNoteInput.value = "";
-  saveState();
-  render();
+  const color = createProjectColor();
+  elements.projectColorInput.value = color;
+  renderColorPalette(elements.projectColorPalette, elements.projectColorInput, color);
 }
 
 function handleManualEntrySubmit(event) {
@@ -262,7 +348,7 @@ async function handleExportSubmit(event) {
   event.preventDefault();
 
   const range = getSelectedRange();
-  const rows = buildExportRows(range.start, range.end);
+  const rows = buildExportRows(range.start, range.end, getExportProjectFilter());
   const format = elements.exportFormatSelect.value;
 
   if (!rows.length) {
@@ -286,7 +372,7 @@ async function handleExportSubmit(event) {
     return;
   }
 
-  const workbook = createSpreadsheetXml(rows, range.label);
+  const workbook = createSpreadsheetXml(rows, range.label, isMonthlyWorkbookMode(range));
   const blob = new Blob([workbook], { type: "application/vnd.ms-excel" });
   const fileName = `zeiterfassung-${range.fileStamp}.xls`;
   const file = new File([blob], fileName, { type: blob.type });
@@ -298,6 +384,7 @@ function updateExportFields() {
   elements.exportDayField.hidden = type !== "day";
   elements.exportWeekField.hidden = type !== "week";
   elements.exportMonthField.hidden = type !== "customMonth";
+  elements.exportProjectField.hidden = elements.exportScopeSelect.value !== "single";
 }
 
 function startTicker() {
@@ -322,15 +409,23 @@ function updateActiveTimer() {
 
 function render() {
   elements.roundingSelect.value = String(getRoundingMinutes());
+  elements.dailyGoalInput.value = String(getDailyGoalHours());
+  elements.weeklyGoalInput.value = String(getWeeklyGoalHours());
   renderBackupStatus();
   renderProjects();
   renderManualProjectOptions();
+  renderExportProjectOptions();
   renderEntries();
   renderChart();
+  renderCalendar();
+  renderGoalStatus();
   renderTotals();
   updateActiveTimer();
   updateExportFields();
   elements.deleteAllEntriesButton.disabled = !state.entries.length;
+  const hasActiveSession = Boolean(state.activeSession);
+  elements.editActiveSessionButton.disabled = !hasActiveSession;
+  elements.pauseActiveSessionButton.disabled = !hasActiveSession;
 }
 
 function renderProjects() {
@@ -354,6 +449,7 @@ function renderProjects() {
 
   for (const project of filteredProjects) {
     const active = state.activeSession?.projectId === project.id;
+    const color = getProjectColor(project.id);
     const projectEntries = state.entries.filter((entry) => entry.projectId === project.id && isEntryOnDate(entry, new Date()));
     const projectTotalMs = projectEntries.reduce((sum, entry) => sum + getDurationMs(entry), 0);
     const notePreview = project.note
@@ -364,10 +460,14 @@ function renderProjects() {
     card.className = `project-card${active ? " active" : ""}`;
     card.draggable = true;
     card.dataset.projectId = project.id;
+    card.style.setProperty("--project-color", color);
     card.innerHTML = `
       <div class="project-header-row">
         <div class="project-main">
-          <div class="project-name">${escapeHtml(project.name)}</div>
+          <div class="project-title">
+            <span class="project-color-dot" style="background:${color}"></span>
+            <div class="project-name">${escapeHtml(project.name)}</div>
+          </div>
           <div class="project-meta">
             <span class="pill">${active ? `Läuft seit ${formatDateTime(state.activeSession.start)}` : `${projectEntries.length} Zeitblock${projectEntries.length === 1 ? "" : "e"} heute`}</span>
             <span class="pill">Heute ${formatDuration(projectTotalMs)}</span>
@@ -443,11 +543,20 @@ function renderEntries() {
     }
 
     const project = findProject(entry.projectId);
+    const color = getProjectColor(entry.projectId);
     const row = document.createElement("tr");
     row.dataset.entryId = entry.id;
     row.innerHTML = `
-      <td>${escapeHtml(project?.name || "Unbekanntes Projekt")}</td>
-      <td>${formatDateTime(entry.start)}</td>
+      <td>
+        <span class="project-inline-label">
+          <span class="project-color-dot" style="background:${color}"></span>
+          <span>${escapeHtml(project?.name || "Unbekanntes Projekt")}</span>
+        </span>
+      </td>
+      <td>
+        <div>${escapeHtml(formatDateTime(entry.start))}</div>
+        <div>${escapeHtml(formatDateTime(entry.end))}</div>
+      </td>
       <td>${formatDuration(getDurationMs(entry))}</td>
       <td>${escapeHtml(entry.note || "—")}</td>
       <td><button class="secondary-button" type="button" data-entry-action="edit" data-entry-id="${entry.id}">Editor</button></td>
@@ -478,6 +587,39 @@ function renderChart() {
   }
 
   renderChartLegend(data);
+}
+
+function renderCalendar() {
+  if (!elements.calendarDetails.open) {
+    return;
+  }
+
+  const selectedDate = new Date(elements.calendarDateInput.value || new Date());
+  const view = elements.calendarViewSelect.value;
+  const entries = state.entries.filter((entry) => entry.end);
+  elements.calendarLegend.innerHTML = `
+    <span><i class="calendar-dot" style="background:#0f766e"></i> Zeitblock</span>
+    <span><i class="calendar-dot" style="background:#d97706"></i> Feiertag</span>
+    <span><i class="calendar-dot" style="background:#2563eb"></i> Wochenende</span>
+  `;
+
+  if (view === "day") {
+    renderDayCalendar(selectedDate, entries);
+    return;
+  }
+
+  if (view === "week") {
+    renderWeekCalendar(selectedDate, entries);
+    return;
+  }
+
+  renderMonthCalendar(selectedDate, entries);
+}
+
+function handleCalendarToggle() {
+  if (elements.calendarDetails.open) {
+    renderCalendar();
+  }
 }
 
 function renderTotals() {
@@ -530,6 +672,7 @@ function handleProjectNoteClick(event) {
 
 function bindProjectSorting() {
   const cards = [...elements.projectsList.querySelectorAll(".project-card[data-project-id]")];
+  const handles = [...elements.projectsList.querySelectorAll(".drag-handle")];
 
   for (const card of cards) {
     card.addEventListener("dragstart", handleProjectDragStart);
@@ -537,6 +680,12 @@ function bindProjectSorting() {
     card.addEventListener("dragleave", handleProjectDragLeave);
     card.addEventListener("drop", handleProjectDrop);
     card.addEventListener("dragend", handleProjectDragEnd);
+  }
+
+  for (const handle of handles) {
+    handle.addEventListener("touchstart", handleProjectTouchStart, { passive: true });
+    handle.addEventListener("touchmove", handleProjectTouchMove, { passive: true });
+    handle.addEventListener("touchend", handleProjectTouchEnd);
   }
 }
 
@@ -586,6 +735,47 @@ function handleProjectDragEnd() {
   });
 }
 
+function handleProjectTouchStart(event) {
+  const card = event.currentTarget.closest(".project-card");
+  if (!card) {
+    return;
+  }
+  touchDragProjectId = card.dataset.projectId;
+  card.classList.add("dragging");
+}
+
+function handleProjectTouchMove(event) {
+  if (!touchDragProjectId) {
+    return;
+  }
+
+  const touch = event.touches[0];
+  const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest(".project-card");
+  elements.projectsList.querySelectorAll(".project-card").forEach((card) => card.classList.remove("drag-over"));
+
+  if (target && target.dataset.projectId !== touchDragProjectId) {
+    target.classList.add("drag-over");
+    touchDragTargetId = target.dataset.projectId;
+  }
+}
+
+function handleProjectTouchEnd() {
+  if (touchDragProjectId && touchDragTargetId && touchDragProjectId !== touchDragTargetId) {
+    const fromIndex = state.projects.findIndex((project) => project.id === touchDragProjectId);
+    const toIndex = state.projects.findIndex((project) => project.id === touchDragTargetId);
+    if (fromIndex !== -1 && toIndex !== -1) {
+      const [movedProject] = state.projects.splice(fromIndex, 1);
+      state.projects.splice(toIndex, 0, movedProject);
+      saveState();
+      render();
+    }
+  }
+
+  touchDragProjectId = null;
+  touchDragTargetId = null;
+  handleProjectDragEnd();
+}
+
 function moveProject(projectId, direction) {
   const index = state.projects.findIndex((project) => project.id === projectId);
   const nextIndex = index + direction;
@@ -609,16 +799,14 @@ function handleEntryActionClick(event) {
 }
 
 function clockIn(projectId) {
-  let nowIso = new Date().toISOString();
+  const nowIso = new Date().toISOString();
 
   if (state.activeSession?.projectId === projectId) {
     return;
   }
 
   if (state.activeSession) {
-    const finalized = finalizeActiveSession(nowIso, true);
-    nowIso = finalized.endIso;
-    maybeShowRoundingNotice(finalized);
+    finalizeActiveSession(nowIso, false);
   }
 
   state.activeSession = { projectId, start: nowIso };
@@ -633,6 +821,48 @@ function clockOut(projectId) {
 
   const finalized = finalizeActiveSession(new Date().toISOString(), true);
   maybeShowRoundingNotice(finalized);
+  saveState();
+  render();
+}
+
+function openActiveSessionEditor() {
+  if (!state.activeSession) {
+    return;
+  }
+
+  elements.activeSessionProjectId.innerHTML = buildProjectOptions(state.activeSession.projectId);
+  elements.activeSessionStart.value = toDateTimeLocalValue(new Date(state.activeSession.start));
+  elements.activeSessionDialog.showModal();
+}
+
+function handleActiveSessionSubmit(event) {
+  event.preventDefault();
+
+  if (!state.activeSession) {
+    return;
+  }
+
+  const projectId = elements.activeSessionProjectId.value;
+  const start = new Date(elements.activeSessionStart.value);
+
+  if (!findProject(projectId) || Number.isNaN(start.getTime()) || start > new Date()) {
+    alert("Bitte gib einen gültigen Projektwert und eine gültige Startzeit an.");
+    return;
+  }
+
+  state.activeSession.projectId = projectId;
+  state.activeSession.start = start.toISOString();
+  saveState();
+  elements.activeSessionDialog.close();
+  render();
+}
+
+function pauseActiveSession() {
+  if (!state.activeSession) {
+    return;
+  }
+
+  finalizeActiveSession(new Date().toISOString(), false);
   saveState();
   render();
 }
@@ -746,6 +976,7 @@ function handleProjectEditorSubmit(event) {
   const project = findProject(editingProjectId);
   const name = elements.projectEditorName.value.trim();
   const note = elements.projectEditorNote.value.trim();
+  const color = normalizeHexColor(elements.projectEditorColor.value) || project?.color || createProjectColor();
 
   if (!project || !name) {
     return;
@@ -758,6 +989,7 @@ function handleProjectEditorSubmit(event) {
 
   project.name = name;
   project.note = note;
+  project.color = color;
   saveState();
   elements.projectEditorDialog.close();
   render();
@@ -773,6 +1005,9 @@ function openProjectEditor(projectId) {
   elements.projectEditorId.value = project.id;
   elements.projectEditorName.value = project.name;
   elements.projectEditorNote.value = project.note || "";
+  const color = getProjectColor(project.id);
+  elements.projectEditorColor.value = color;
+  renderColorPalette(elements.projectEditorColorPalette, elements.projectEditorColor, color);
   elements.projectEditorDialog.showModal();
 }
 
@@ -831,9 +1066,9 @@ async function handleImportData(event) {
     openConfirmation({
       title: "Daten importieren?",
       message: buildImportPreviewMessage(importedState),
-      confirmLabel: "Ja, importieren",
+      confirmLabel: "Ja, zusammenführen",
       onConfirm: () => {
-        replaceState(importedState);
+        mergeImportedData(importedState);
         elements.settingsDialog.close();
         applyManualTimeSuggestions();
         render();
@@ -948,16 +1183,21 @@ function normalizeState(rawState) {
   const fallback = createInitialState();
   const projects = Array.isArray(rawState.projects) ? rawState.projects : [];
   const entries = Array.isArray(rawState.entries) ? rawState.entries : [];
+  const usedAutoColors = new Set(projects.map((project) => normalizeHexColor(project.color)).filter(Boolean));
 
   return {
     schemaVersion: rawState.schemaVersion || DATA_SCHEMA_VERSION,
     version: rawState.version || APP_VERSION,
-    projects: projects.map((project) => ({
-      id: project.id || createId(),
-      name: project.name || "Unbenanntes Projekt",
-      note: project.note || "",
-      createdAt: project.createdAt || new Date().toISOString()
-    })),
+    projects: projects.map((project) => {
+      const id = project.id || createId();
+      return {
+        id,
+        name: project.name || "Unbenanntes Projekt",
+        note: project.note || "",
+        color: normalizeHexColor(project.color) || getNextAvailableProjectColor(usedAutoColors, id),
+        createdAt: project.createdAt || new Date().toISOString()
+      };
+    }),
     entries: entries.map((entry) => ({
       id: entry.id || createId(),
       projectId: entry.projectId,
@@ -970,7 +1210,9 @@ function normalizeState(rawState) {
     activeSession: rawState.activeSession || null,
     settings: {
       roundingMinutes: rawState.settings?.roundingMinutes || fallback.settings.roundingMinutes,
-      lastDataExportAt: rawState.settings?.lastDataExportAt || null
+      lastDataExportAt: rawState.settings?.lastDataExportAt || null,
+      dailyGoalHours: rawState.settings?.dailyGoalHours ?? fallback.settings.dailyGoalHours,
+      weeklyGoalHours: rawState.settings?.weeklyGoalHours ?? fallback.settings.weeklyGoalHours
     }
   };
 }
@@ -1005,6 +1247,44 @@ function renderBackupStatus() {
   const ageDays = Math.floor((Date.now() - exportDate.getTime()) / 86400000);
   const prefix = ageDays > 7 ? "Backup älter als 7 Tage" : "Letztes App-Daten-Backup";
   elements.backupStatusText.textContent = `${prefix}: ${formatDateTime(lastExport)}`;
+}
+
+function renderExportProjectOptions() {
+  elements.exportProjectSelect.innerHTML = "";
+  for (const project of state.projects) {
+    const option = document.createElement("option");
+    option.value = project.id;
+    option.textContent = project.name;
+    elements.exportProjectSelect.appendChild(option);
+  }
+}
+
+function handleGoalChange() {
+  state.settings.dailyGoalHours = Number(elements.dailyGoalInput.value) || 0;
+  state.settings.weeklyGoalHours = Number(elements.weeklyGoalInput.value) || 0;
+  saveState();
+  renderGoalStatus();
+}
+
+function renderGoalStatus() {
+  const now = new Date();
+  const todayActual = sumRangeDuration(startOfDay(now), endOfDay(now));
+  const weekActual = sumRangeDuration(startOfWeek(now), endOfWeek(now));
+  const dailyTarget = getDailyGoalHours() * 3600000;
+  const weeklyTarget = getWeeklyGoalHours() * 3600000;
+
+  elements.dailyGoalStatus.textContent = `${formatDuration(todayActual)} / ${formatDuration(dailyTarget)}`;
+  elements.weeklyGoalStatus.textContent = `${formatDuration(weekActual)} / ${formatDuration(weeklyTarget)}`;
+  elements.dailyGoalStatus.className = todayActual >= dailyTarget ? "goal-good" : "goal-warn";
+  elements.weeklyGoalStatus.className = weekActual >= weeklyTarget ? "goal-good" : "goal-warn";
+}
+
+function getDailyGoalHours() {
+  return Number(state.settings?.dailyGoalHours ?? 8);
+}
+
+function getWeeklyGoalHours() {
+  return Number(state.settings?.weeklyGoalHours ?? 40);
 }
 
 function maybeShowRoundingNotice(finalized) {
@@ -1058,12 +1338,11 @@ function getChartData() {
     totals.set(key, current);
   }
 
-  const palette = ["#0f766e", "#d97706", "#2563eb", "#b45309", "#0f766e", "#be123c", "#4f46e5", "#15803d"];
   return [...totals.values()]
     .sort((left, right) => right.durationMs - left.durationMs)
-    .map((item, index) => ({
+    .map((item) => ({
       ...item,
-      color: palette[index % palette.length]
+      color: getProjectColor(item.projectId)
     }));
 }
 
@@ -1167,19 +1446,21 @@ function buildChartDataFromRows(rows) {
   const totals = new Map();
   for (const row of rows) {
     const durationMs = Number.parseFloat(row.durationHours.replace(",", ".")) * 3600000;
-    const current = totals.get(row.project) || { name: row.project, durationMs: 0 };
+    const current = totals.get(row.project) || {
+      name: row.project,
+      durationMs: 0,
+      color: row.projectColor || getFallbackProjectColor(row.project)
+    };
     current.durationMs += durationMs;
     totals.set(row.project, current);
   }
 
-  const palette = ["#0f766e", "#d97706", "#2563eb", "#b45309", "#0f766e", "#be123c", "#4f46e5", "#15803d"];
   const total = [...totals.values()].reduce((sum, item) => sum + item.durationMs, 0) || 1;
 
   return [...totals.values()]
     .sort((left, right) => right.durationMs - left.durationMs)
-    .map((item, index) => ({
+    .map((item) => ({
       ...item,
-      color: palette[index % palette.length],
       percent: `${((item.durationMs / total) * 100).toFixed(1).replace(".", ",")} %`
     }));
 }
@@ -1230,6 +1511,221 @@ function createChartLegendMarkup(data) {
       <span><strong>${escapeHtml(item.name)}</strong><br>${formatDuration(item.durationMs)} (${item.percent})</span>
     </div>
   `).join("");
+}
+
+function renderDayCalendar(selectedDate, entries) {
+  const dayEntries = entries
+    .filter((entry) => isEntryOnDate(entry, selectedDate))
+    .sort((left, right) => new Date(left.start) - new Date(right.start));
+
+  elements.calendarView.innerHTML = `
+    <div class="calendar-grid">
+      ${dayEntries.map((entry) => {
+        const project = findProject(entry.projectId);
+        const color = getProjectColor(entry.projectId);
+        return `<div class="calendar-block" style="background:${color}">
+          <strong>${escapeHtml(project?.name || "Unbekanntes Projekt")}</strong><br>
+          ${escapeHtml(formatDateTime(entry.start))} - ${escapeHtml(formatDateTime(entry.end))}<br>
+          ${escapeHtml(formatDuration(getDurationMs(entry)))}${entry.note ? `<br>${escapeHtml(entry.note)}` : ""}
+        </div>`;
+      }).join("") || '<div class="calendar-cell"><span class="calendar-cell-meta">Keine Zeitblöcke an diesem Tag</span></div>'}
+    </div>
+  `;
+}
+
+function renderWeekCalendar(selectedDate, entries) {
+  const start = startOfWeek(selectedDate);
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+
+  const weekdayHeaders = ["", ...days.map((day) => `<div class="calendar-weekday">${escapeHtml(formatShortDay(day))}</div>`)].join("");
+  const hourRows = Array.from({ length: 16 }, (_, hourIndex) => {
+    const hour = 6 + hourIndex;
+    const cells = days.map((day) => {
+      const dayEntries = entries.filter((entry) => isEntryOnDate(entry, day) && new Date(entry.start).getHours() === hour);
+      const classes = buildCalendarClasses(day);
+      return `<div class="calendar-day-column ${classes}">
+        ${dayEntries.map((entry) => {
+          const project = findProject(entry.projectId);
+          return `<div class="calendar-block" style="background:${getProjectColor(entry.projectId)}">
+            <strong>${escapeHtml(project?.name || "Unbekanntes Projekt")}</strong><br>
+            ${escapeHtml(formatDuration(getDurationMs(entry)))}
+          </div>`;
+        }).join("")}
+      </div>`;
+    }).join("");
+    return `<div class="calendar-hour">${String(hour).padStart(2, "0")}:00</div>${cells}`;
+  }).join("");
+
+  elements.calendarView.innerHTML = `<div class="calendar-grid week">${weekdayHeaders}${hourRows}</div>`;
+}
+
+function renderMonthCalendar(selectedDate, entries) {
+  const start = startOfWeek(startOfMonth(selectedDate));
+  const currentMonth = selectedDate.getMonth();
+  const weekdayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  const headers = weekdayNames.map((name) => `<div class="calendar-month-header">${name}</div>`).join("");
+
+  const cells = Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    const dayEntries = entries.filter((entry) => isEntryOnDate(entry, day));
+    const total = dayEntries.reduce((sum, entry) => sum + getDurationMs(entry), 0);
+    const classes = `${buildCalendarClasses(day)} ${day.getMonth() === currentMonth ? "" : "is-outside"}`;
+    return `<div class="calendar-cell ${classes}">
+      <strong>${day.getDate()}</strong>
+      <span class="calendar-cell-meta">${formatDuration(total)}</span>
+      ${dayEntries.slice(0, 3).map((entry) => {
+        const project = findProject(entry.projectId);
+        return `<div class="calendar-chip" style="background:${getProjectColor(entry.projectId)}">${escapeHtml(project?.name || "Unbekanntes Projekt")}</div>`;
+      }).join("")}
+    </div>`;
+  }).join("");
+
+  elements.calendarView.innerHTML = `<div class="calendar-grid month">${headers}${cells}</div>`;
+}
+
+function buildCalendarClasses(date) {
+  const classes = [];
+  if (isWeekend(date)) {
+    classes.push("is-weekend");
+  }
+  if (isGermanNationalHoliday(date)) {
+    classes.push("is-holiday");
+  }
+  return classes.join(" ");
+}
+
+function formatShortDay(date) {
+  return new Intl.DateTimeFormat("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit"
+  }).format(date);
+}
+
+function getProjectColor(projectId) {
+  return findProject(projectId)?.color || getFallbackProjectColor(projectId);
+}
+
+function createProjectColor() {
+  const usedColors = new Set(
+    state.projects
+      .map((project) => normalizeHexColor(project.color))
+      .filter(Boolean)
+  );
+  return getNextAvailableProjectColor(usedColors, createId());
+}
+
+function getNextAvailableProjectColor(usedColors, fallbackSeed) {
+  const nextColor = PROJECT_COLOR_PALETTE.find((color) => !usedColors.has(color));
+  if (nextColor) {
+    usedColors.add(nextColor);
+    return nextColor;
+  }
+  return getFallbackProjectColor(fallbackSeed);
+}
+
+function getFallbackProjectColor(seed) {
+  const index = Math.abs(hashString(String(seed))) % PROJECT_COLOR_PALETTE.length;
+  return PROJECT_COLOR_PALETTE[index];
+}
+
+function normalizeHexColor(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const normalized = value.trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(normalized) ? normalized : "";
+}
+
+function renderColorPalette(container, input, selectedColor) {
+  if (!container || !input) {
+    return;
+  }
+
+  const normalizedSelected = normalizeHexColor(selectedColor) || PROJECT_COLOR_PALETTE[0];
+  input.value = normalizedSelected;
+  container.innerHTML = "";
+
+  for (const color of PROJECT_COLOR_PALETTE) {
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.className = `color-swatch${color === normalizedSelected ? " is-selected" : ""}`;
+    swatch.style.background = color;
+    swatch.dataset.color = color;
+    swatch.setAttribute("role", "radio");
+    swatch.setAttribute("aria-checked", String(color === normalizedSelected));
+    swatch.setAttribute("aria-label", `Farbe ${color}`);
+    swatch.addEventListener("click", () => {
+      input.value = color;
+      renderColorPalette(container, input, color);
+    });
+    container.appendChild(swatch);
+  }
+}
+
+function hashString(value) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return hash;
+}
+
+function isWeekend(date) {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+function isGermanNationalHoliday(date) {
+  const monthDay = `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const staticHolidays = new Set(["01-01", "05-01", "10-03", "12-25", "12-26"]);
+  if (staticHolidays.has(monthDay)) {
+    return true;
+  }
+
+  const easterSunday = getEasterSunday(date.getFullYear());
+  const goodFriday = addDays(easterSunday, -2);
+  const easterMonday = addDays(easterSunday, 1);
+  const ascensionDay = addDays(easterSunday, 39);
+  const whitMonday = addDays(easterSunday, 50);
+
+  return [goodFriday, easterMonday, ascensionDay, whitMonday].some((holiday) => isSameDate(holiday, date));
+}
+
+function getEasterSunday(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function isSameDate(left, right) {
+  return left.getFullYear() === right.getFullYear()
+    && left.getMonth() === right.getMonth()
+    && left.getDate() === right.getDate();
 }
 
 function attachTooltip(element) {
@@ -1393,7 +1889,59 @@ function buildImportPreviewMessage(importedState) {
   const projectCount = importedState.projects.length;
   const entryCount = importedState.entries.length;
   const rounding = importedState.settings?.roundingMinutes || 5;
-  return `Sollen die aktuellen Daten ersetzt werden?\n\nImport enthält:\n${projectCount} Projekte\n${entryCount} Zeitblöcke\nRundung: ${rounding} Minuten`;
+  return `Sollen die Daten zusammengeführt werden?\n\nImport enthält:\n${projectCount} Projekte\n${entryCount} Zeitblöcke\nRundung: ${rounding} Minuten\n\nBestehende Projekte und Zeitblöcke bleiben erhalten. Dubletten werden übersprungen.`;
+}
+
+function mergeImportedData(importedState) {
+  const normalizedImport = normalizeState(importedState);
+  const projectIdMap = new Map(state.projects.map((project) => [normalizeProjectName(project.name), project.id]));
+
+  for (const importedProject of normalizedImport.projects) {
+    const normalizedName = normalizeProjectName(importedProject.name);
+    if (!projectIdMap.has(normalizedName)) {
+      const newProject = { ...structuredClone(importedProject), id: createId() };
+      state.projects.push(newProject);
+      projectIdMap.set(normalizedName, newProject.id);
+    } else {
+      const existingProject = findProject(projectIdMap.get(normalizedName));
+      if (existingProject && !existingProject.note && importedProject.note) {
+        existingProject.note = importedProject.note;
+      }
+      if (existingProject && !normalizeHexColor(existingProject.color) && importedProject.color) {
+        existingProject.color = importedProject.color;
+      }
+    }
+  }
+
+  const entryFingerprint = new Set(state.entries.map((entry) => createEntryFingerprint(entry)));
+  for (const importedEntry of normalizedImport.entries) {
+    const projectName = normalizedImport.projects.find((project) => project.id === importedEntry.projectId)?.name;
+    const mappedProjectId = projectName ? projectIdMap.get(normalizeProjectName(projectName)) : importedEntry.projectId;
+    const nextEntry = {
+      ...structuredClone(importedEntry),
+      id: createId(),
+      projectId: mappedProjectId
+    };
+    const fingerprint = createEntryFingerprint(nextEntry);
+    if (!entryFingerprint.has(fingerprint)) {
+      state.entries.push(nextEntry);
+      entryFingerprint.add(fingerprint);
+    }
+  }
+
+  state.settings = {
+    ...state.settings,
+    roundingMinutes: normalizedImport.settings?.roundingMinutes || state.settings.roundingMinutes,
+    dailyGoalHours: normalizedImport.settings?.dailyGoalHours ?? state.settings.dailyGoalHours,
+    weeklyGoalHours: normalizedImport.settings?.weeklyGoalHours ?? state.settings.weeklyGoalHours,
+    lastDataExportAt: state.settings.lastDataExportAt
+  };
+
+  saveState();
+}
+
+function createEntryFingerprint(entry) {
+  return [entry.projectId, entry.start, entry.end, entry.note || "", entry.type || ""].join("|");
 }
 
 function createCsv(rows) {
@@ -1515,9 +2063,20 @@ function getSelectedRange() {
   };
 }
 
-function buildExportRows(rangeStart, rangeEnd) {
+function getExportProjectFilter() {
+  return elements.exportScopeSelect.value === "single" ? elements.exportProjectSelect.value : null;
+}
+
+function isMonthlyWorkbookMode(range) {
+  return elements.exportFormatSelect.value === "excel"
+    && elements.exportScopeSelect.value === "all"
+    && /^Monat /.test(range.label);
+}
+
+function buildExportRows(rangeStart, rangeEnd, projectIdFilter = null) {
   return state.entries
     .filter((entry) => entry.end)
+    .filter((entry) => !projectIdFilter || entry.projectId === projectIdFilter)
     .map((entry) => clipEntryToRange(entry, rangeStart, rangeEnd))
     .filter(Boolean)
     .sort((left, right) => new Date(left.start) - new Date(right.start))
@@ -1527,6 +2086,7 @@ function buildExportRows(rangeStart, rangeEnd) {
       return {
         date: toDateInputValue(new Date(entry.start)),
         project: project?.name || "Unbekanntes Projekt",
+        projectColor: getProjectColor(entry.projectId),
         start: formatDateTime(entry.start),
         end: formatDateTime(entry.end),
         durationHours: (durationMs / 3600000).toFixed(2).replace(".", ","),
@@ -1554,7 +2114,7 @@ function clipEntryToRange(entry, rangeStart, rangeEnd) {
   };
 }
 
-function createSpreadsheetXml(rows, label) {
+function createSpreadsheetXml(rows, label, includeProjectSheets = false) {
   const totalHours = rows.reduce((sum, row) => sum + Number.parseFloat(row.durationHours.replace(",", ".")), 0);
   const chartData = buildChartDataFromRows(rows);
   const dataRows = rows.map((row) => `
@@ -1583,6 +2143,10 @@ function createSpreadsheetXml(rows, label) {
       <Cell><Data ss:Type="String">${escapeXml((item.durationMs / 3600000).toFixed(2).replace(".", ","))}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(item.percent)}</Data></Cell>
     </Row>`).join("");
+
+  const projectSheets = includeProjectSheets
+    ? summarizeRowsIntoSheets(rows)
+    : "";
 
   return `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
@@ -1635,6 +2199,7 @@ function createSpreadsheetXml(rows, label) {
       ${statisticRows}
     </Table>
   </Worksheet>
+  ${projectSheets}
 </Workbook>`;
 }
 
@@ -1653,6 +2218,41 @@ function summarizeRowsByProject(rows) {
       durationHours: hours.toFixed(2).replace(".", ","),
       durationClock: formatDuration(hours * 3600000)
     }));
+}
+
+function summarizeRowsIntoSheets(rows) {
+  const rowsByProject = new Map();
+  for (const row of rows) {
+    const items = rowsByProject.get(row.project) || [];
+    items.push(row);
+    rowsByProject.set(row.project, items);
+  }
+
+  return [...rowsByProject.entries()].map(([project, projectRows]) => {
+    const safeName = project.replace(/[\\/*?:[\]]/g, "").slice(0, 28) || "Projekt";
+    const dataRows = projectRows.map((row) => `
+      <Row>
+        <Cell><Data ss:Type="String">${escapeXml(row.date)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.start)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.end)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.durationClock)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escapeXml(row.note)}</Data></Cell>
+      </Row>`).join("");
+
+    return `
+  <Worksheet ss:Name="${escapeXml(safeName)}">
+    <Table>
+      <Row>
+        <Cell><Data ss:Type="String">Datum</Data></Cell>
+        <Cell><Data ss:Type="String">Start</Data></Cell>
+        <Cell><Data ss:Type="String">Ende</Data></Cell>
+        <Cell><Data ss:Type="String">Dauer</Data></Cell>
+        <Cell><Data ss:Type="String">Notiz</Data></Cell>
+      </Row>
+      ${dataRows}
+    </Table>
+  </Worksheet>`;
+  }).join("");
 }
 
 function sumRangeDuration(rangeStart, rangeEnd) {

@@ -9,6 +9,7 @@ Eine schlanke Progressive Web App zur Projekt-Zeiterfassung mit lokaler Speicher
 Die App ist bewusst einfach gehalten:
 
 - Projekte anlegen, starten, stoppen und löschen
+- Laufende Zeitblöcke direkt bearbeiten oder pausieren
 - Zeitblöcke manuell erfassen
 - Zeitblöcke kompakt in einer Übersicht anzeigen
 - Zeitanteile visuell als Balken- oder Tortendiagramm darstellen
@@ -49,13 +50,15 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 
 ### 1. Projekte verwalten
 
-- Neue Projekte werden unterhalb der Projektliste angelegt
+- Neue Projekte werden über den Button `Neues Projekt` in einem Popup angelegt
 - Projektnamen müssen eindeutig sein; doppelte Namen werden nicht gespeichert
 - Projekte können Notizen erhalten
+- Projekte bekommen automatisch eine freie Standardfarbe und können später aus einer festen Farbpalette umgefärbt werden
 - In der Projektverwaltung werden nur die Zeitblöcke des aktuellen Tages je Projekt berücksichtigt
 - Laufende Projekte bleiben sichtbar und als aktiv markiert
 - Die Reihenfolge der Projekte kann per Drag-and-drop direkt in der Liste geändert werden
 - Für Touch-Geräte gibt es zusätzlich Verschieben-Buttons nach oben und unten
+- Über den Drag-Handle ist auch eine mobile Touch-Sortierung möglich
 - Eine Suche und Filter für aktive, heutige oder noch ungebuchte Projekte helfen bei vielen Projekten
 - Projekte können umbenannt und ihre Notizen bearbeitet werden
 
@@ -64,6 +67,7 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 - `Einbuchen` startet die Zeitmessung
 - Beim Wechsel auf ein anderes Projekt wird das bisher aktive Projekt automatisch beendet
 - `Ausbuchen` stoppt das aktuell laufende Projekt explizit
+- Laufende Zeitblöcke können direkt bearbeitet oder pausiert werden
 
 ### 3. Zeitblöcke manuell nachtragen
 
@@ -79,7 +83,7 @@ Ein Zeitblock kann mit folgenden Angaben gespeichert werden:
 Die Übersicht ist absichtlich kompakt und zeigt nur:
 
 - Projekt
-- Start
+- Zeitraum
 - Dauer
 - Notiz
 - `Editor`
@@ -98,7 +102,19 @@ Die Statistik zeigt die Verteilung der gebuchten Zeit pro Projekt.
 - Mouse-Over-Tooltip mit Projektname und Dauer
 - Legende mit Farbzuordnung und Dauer
 
-### 6. Zeitblöcke bearbeiten
+### 6. Kalenderansicht
+
+Es gibt eine visuelle Kalenderansicht für:
+
+- Tag
+- Woche
+- Monat
+
+Die Kalenderansicht ist einklappbar und bei Bedarf per Aufklappen sichtbar.
+
+Wochenenden und bundeseinheitliche Feiertage in Deutschland werden markiert.
+
+### 7. Zeitblöcke bearbeiten
 
 Im Editor-Dialog lassen sich:
 
@@ -110,7 +126,7 @@ Im Editor-Dialog lassen sich:
 
 Zusätzlich können alle Zeitblöcke gesammelt mit Sicherheitsabfrage gelöscht werden.
 
-### 7. Daten & Export
+### 8. Daten & Export
 
 Exportierbar sind:
 
@@ -127,14 +143,17 @@ Verfügbare Formate:
 
 Die Exportdateien werden über die Teilen-Funktion des Geräts oder Browsers angeboten. Dadurch können sie direkt an E-Mail, Messenger oder andere kompatible Apps übergeben werden. Falls die Teilen-Funktion nicht verfügbar ist, wird automatisch ein normaler Download verwendet.
 
-### 8. App-Daten übertragen
+Beim Monats-Excel-Export für alle Projekte wird zusätzlich eine Sammelmappe mit einzelnen Projekt-Blättern erzeugt.
+
+### 9. App-Daten übertragen
 
 Im Bereich `Daten & Export` gibt es zusätzlich:
 
 - eine Rundungseinstellung für das Ausbuchen auf 5, 10 oder 15 Minuten
+- tägliche und wöchentliche Sollzeiten
 - einen Backup-Status mit Hinweis auf das letzte exportierte App-Daten-Backup
 - `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
-- `App-Daten importieren`: ersetzt die aktuell gespeicherten Daten durch eine zuvor exportierte JSON-Datei
+- `App-Daten importieren`: führt Daten zusammen und überspringt erkannte Dubletten
 
 Damit lassen sich Daten auf ein anderes Gerät übertragen oder als Sicherung aufbewahren.
 
@@ -169,6 +188,7 @@ Für wichtige Daten empfiehlt sich zusätzlich ein regelmäßiger Export der App
 - Beim Löschen eines Projekts werden auch alle zugehörigen Zeitblöcke entfernt
 - Der Excel-Export enthält Einzelzeilen und Projektsummen
 - Der Excel-Export enthält zusätzlich ein Statistik-Blatt mit den aggregierten Projektwerten
+- Beim Monats-Excel-Export für alle Projekte werden zusätzliche Projekt-Blätter erzeugt
 - CSV und ein HTML-Bericht stehen zusätzlich als Exportformate zur Verfügung
-- Der Import von App-Daten ersetzt den aktuellen lokalen Datenbestand vollständig
+- Der Import von App-Daten führt Daten zusammen und erkennt Dubletten
 - Die App benötigt keinen Build-Prozess und kann direkt als statische Webanwendung betrieben werden
