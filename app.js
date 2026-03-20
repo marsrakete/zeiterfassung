@@ -1,23 +1,25 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
+const LAST_SEEN_BUILD_KEY = "zeiterfassung-last-seen-build";
 const APP_VERSION = "1.0.0";
+const CACHE_VERSION = "v30";
 const DATA_SCHEMA_VERSION = 3;
 const PROJECT_COLOR_PALETTE = [
-  "#0f766e",
-  "#d97706",
-  "#2563eb",
-  "#b45309",
-  "#be123c",
-  "#4f46e5",
-  "#15803d",
-  "#0891b2",
-  "#dc2626",
-  "#7c3aed",
-  "#ca8a04",
-  "#0d9488",
-  "#ea580c",
-  "#1d4ed8",
-  "#4338ca",
-  "#65a30d"
+  "#011a27",
+  "#4cb5f5",
+  "#4d648d",
+  "#5bc8ac",
+  "#a1d6e2",
+  "#a11f0c",
+  "#b7b8b6",
+  "#b6452c",
+  "#d09683",
+  "#e6d72a",
+  "#ed5752",
+  "#f18d9e",
+  "#f1f3ce",
+  "#f4cc70",
+  "#f69454",
+  "#ff2b94"
 ];
 
 const state = loadState();
@@ -33,6 +35,7 @@ const elements = {
   settingsButton: document.querySelector("#settingsButton"),
   activeProjectName: document.querySelector("#activeProjectName"),
   activeTimer: document.querySelector("#activeTimer"),
+  versionLabel: document.querySelector("#versionLabel"),
   roundingNotice: document.querySelector("#roundingNotice"),
   editActiveSessionButton: document.querySelector("#editActiveSessionButton"),
   pauseActiveSessionButton: document.querySelector("#pauseActiveSessionButton"),
@@ -121,10 +124,14 @@ const elements = {
   closeProjectNoteButton: document.querySelector("#closeProjectNoteButton"),
   projectCreateDialog: document.querySelector("#projectCreateDialog"),
   projectCreateCancelButton: document.querySelector("#projectCreateCancelButton"),
+  helpDetails: document.querySelector("#helpDetails"),
+  helpContent: document.querySelector("#helpContent"),
   emptyStateTemplate: document.querySelector("#emptyStateTemplate")
 };
 
 initializeDefaults();
+renderVersionLabel();
+showUpdateNoticeIfNeeded();
 bindEvents();
 render();
 startTicker();
@@ -212,6 +219,32 @@ function initializeDefaults() {
   applyManualTimeSuggestions();
 }
 
+function renderVersionLabel() {
+  elements.versionLabel.textContent = `Version ${APP_VERSION} · Offline-Stand ${CACHE_VERSION}`;
+}
+
+function showUpdateNoticeIfNeeded() {
+  const currentBuild = `${APP_VERSION}|${CACHE_VERSION}`;
+  const lastSeenBuild = localStorage.getItem(LAST_SEEN_BUILD_KEY);
+
+  if (!lastSeenBuild) {
+    localStorage.setItem(LAST_SEEN_BUILD_KEY, currentBuild);
+    return;
+  }
+
+  if (lastSeenBuild === currentBuild) {
+    return;
+  }
+
+  elements.roundingNotice.textContent = "Applikation wurde aktualisiert";
+  elements.roundingNotice.hidden = false;
+  clearTimeout(roundingNoticeTimeoutId);
+  roundingNoticeTimeoutId = setTimeout(() => {
+    elements.roundingNotice.hidden = true;
+  }, 5000);
+  localStorage.setItem(LAST_SEEN_BUILD_KEY, currentBuild);
+}
+
 function bindEvents() {
   elements.projectForm.addEventListener("submit", handleProjectSubmit);
   elements.newProjectButton.addEventListener("click", openProjectCreateDialog);
@@ -265,6 +298,7 @@ function bindEvents() {
   elements.projectEditorDialog.addEventListener("close", () => {
     editingProjectId = null;
   });
+  elements.helpDetails.addEventListener("toggle", handleHelpToggle);
   elements.closeProjectNoteButton.addEventListener("click", () => {
     elements.projectNoteDialog.close();
   });
@@ -628,6 +662,125 @@ function handleCalendarToggle() {
   }
 }
 
+function handleHelpToggle() {
+  if (elements.helpDetails.open) {
+    loadHelpContent();
+  }
+}
+
+async function loadHelpContent() {
+  elements.helpContent.innerHTML = '<p class="help-loading">Dokumentation wird geladen …</p>';
+
+  try {
+    const response = await fetch("./README.md", { cache: "no-cache" });
+    if (!response.ok) {
+      throw new Error("README konnte nicht geladen werden.");
+    }
+
+    const markdown = await response.text();
+    elements.helpContent.innerHTML = renderMarkdownAsHtml(markdown);
+  } catch {
+    elements.helpContent.innerHTML = "<p class=\"help-loading\">Die Hilfe konnte gerade nicht geladen werden.</p>";
+  }
+}
+
+function renderMarkdownAsHtml(markdown) {
+  const lines = markdown.replace(/\r/g, "").split("\n");
+  const parts = [];
+  let listItems = [];
+  let paragraphLines = [];
+  let codeLines = [];
+  let inCodeBlock = false;
+
+  const flushList = () => {
+    if (!listItems.length) {
+      return;
+    }
+    parts.push(`<ul>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+    listItems = [];
+  };
+
+  const flushParagraph = () => {
+    if (!paragraphLines.length) {
+      return;
+    }
+    parts.push(`<p>${renderInlineMarkdown(paragraphLines.join(" "))}</p>`);
+    paragraphLines = [];
+  };
+
+  const flushCode = () => {
+    if (!codeLines.length) {
+      return;
+    }
+    parts.push(`<pre><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+    codeLines = [];
+  };
+
+  for (const line of lines) {
+    if (line.startsWith("```")) {
+      flushList();
+      flushParagraph();
+      if (inCodeBlock) {
+        flushCode();
+      }
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(line);
+      continue;
+    }
+
+    if (!line.trim()) {
+      flushList();
+      flushParagraph();
+      continue;
+    }
+
+    const headingMatch = /^(#{1,3})\s+(.+)$/.exec(line);
+    if (headingMatch) {
+      flushList();
+      flushParagraph();
+      const level = headingMatch[1].length;
+      parts.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
+      continue;
+    }
+
+    const listMatch = /^-\s+(.+)$/.exec(line);
+    if (listMatch) {
+      flushParagraph();
+      listItems.push(listMatch[1]);
+      continue;
+    }
+
+    if (line.startsWith("![")) {
+      flushList();
+      flushParagraph();
+      continue;
+    }
+
+    paragraphLines.push(line.trim());
+  }
+
+  flushList();
+  flushParagraph();
+  flushCode();
+  return parts.join("");
+}
+
+function renderInlineMarkdown(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
+    if (/^https?:\/\//i.test(href)) {
+      return `<a href="${href}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
+    }
+    return escapeHtml(label);
+  });
+  return html;
+}
+
 function renderTotals() {
   const now = new Date();
   elements.todayTotal.textContent = formatDuration(sumRangeDuration(startOfDay(now), endOfDay(now)));
@@ -812,7 +965,8 @@ function clockIn(projectId) {
   }
 
   if (state.activeSession) {
-    finalizeActiveSession(nowIso, false);
+    const finalized = finalizeActiveSession(nowIso, true);
+    maybeShowRoundingNotice(finalized);
   }
 
   state.activeSession = { projectId, start: nowIso };

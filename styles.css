@@ -70,6 +70,16 @@ button, input, select, textarea { font: inherit; }
   margin-bottom: 28px;
 }
 
+.hero-headline {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-headline .eyebrow {
+  margin: 0;
+}
+
 .eyebrow, .section-kicker {
   margin: 0 0 8px;
   text-transform: uppercase;
@@ -81,19 +91,6 @@ button, input, select, textarea { font: inherit; }
 
 h1, h2, h3, p { margin: 0; }
 
-h1 {
-  font-size: clamp(2.2rem, 5vw, 4.2rem);
-  line-height: 0.98;
-  max-width: 10ch;
-}
-
-.hero-copy {
-  margin-top: 14px;
-  max-width: 56ch;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
 .rounding-notice {
   margin-top: 12px;
   display: inline-flex;
@@ -104,11 +101,37 @@ h1 {
   font-weight: 700;
 }
 
+.version-label {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .hero-actions {
   display: flex;
   flex-direction: column;
   gap: 14px;
   align-items: end;
+}
+
+.icon-button {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+}
+
+.icon-button svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
 }
 
 .status-card, .panel, .stat-card {
@@ -564,6 +587,15 @@ th {
   max-width: 520px;
 }
 
+.settings-group {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(103, 74, 33, 0.1);
+}
+
 .settings-copy {
   display: grid;
   gap: 8px;
@@ -615,6 +647,69 @@ th {
 
 .calendar-content {
   padding: 0 18px 18px;
+}
+
+.help-details {
+  border: 1px solid rgba(103, 74, 33, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.help-details summary {
+  cursor: pointer;
+  padding: 16px 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.help-content {
+  padding: 0 18px 18px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.help-loading {
+  color: var(--muted);
+}
+
+.help-content h1,
+.help-content h2,
+.help-content h3 {
+  color: var(--text);
+  margin: 20px 0 10px;
+}
+
+.help-content h1:first-child,
+.help-content h2:first-child,
+.help-content h3:first-child {
+  margin-top: 0;
+}
+
+.help-content p,
+.help-content ul,
+.help-content pre {
+  margin: 0 0 14px;
+}
+
+.help-content ul {
+  padding-left: 20px;
+}
+
+.help-content code,
+.help-content pre {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.help-content pre {
+  overflow-x: auto;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(36, 29, 19, 0.06);
+  color: var(--text);
+}
+
+.help-content a {
+  color: var(--primary-strong);
 }
 
 .calendar-legend {
@@ -748,9 +843,12 @@ th {
     flex-direction: column;
     align-items: stretch;
   }
+  .hero-headline {
+    justify-content: space-between;
+    width: 100%;
+  }
   .panel, .full-width { grid-column: 1 / -1; }
   .panel { padding: 18px; }
-  h1 { max-width: none; }
   .projects-list {
     grid-template-columns: 1fr;
   }

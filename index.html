@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0f766e">
-  <meta name="description" content="Projekt-Zeiterfassung als progressive Webapp mit lokaler Speicherung und Excel-Export.">
+  <meta name="description" content="Zeiterfassung als progressive Webapp mit lokaler Speicherung und Excel-Export.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/app-icon.svg">
   <link rel="stylesheet" href="styles.css">
-  <title>Projekt-Zeiterfassung</title>
+  <title>Zeiterfassung</title>
 </head>
 <body>
   <div class="background-shape shape-one"></div>
@@ -18,13 +18,18 @@
   <main class="app-shell">
     <header class="hero">
       <div>
-        <p class="eyebrow">Progressive Web App</p>
-        <h1>Projekt-Zeiterfassung</h1>
-        <p class="hero-copy">Projekte anlegen, Zeiten live buchen, manuell nachtragen und als Excel-Datei exportieren.</p>
+        <div class="hero-headline">
+          <p class="eyebrow">Zeiterfassung</p>
+          <button id="settingsButton" class="icon-button" type="button" aria-label="Daten und Export öffnen" title="Daten und Export">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.13-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"/>
+            </svg>
+          </button>
+        </div>
+        <p id="versionLabel" class="version-label"></p>
         <p id="roundingNotice" class="rounding-notice" hidden></p>
       </div>
       <div class="hero-actions">
-        <button id="settingsButton" class="secondary-button" type="button">Daten & Export</button>
         <div class="status-card">
           <span class="status-label">Aktiv</span>
           <strong id="activeProjectName">Kein Projekt eingebucht</strong>
@@ -213,6 +218,15 @@
           </table>
         </div>
       </section>
+
+      <section class="panel full-width">
+        <details id="helpDetails" class="help-details">
+          <summary>Hilfe & Dokumentation</summary>
+          <div id="helpContent" class="help-content">
+            <p class="help-loading">Dokumentation wird geladen …</p>
+          </div>
+        </details>
+      </section>
     </section>
   </main>
 
@@ -284,77 +298,89 @@
         <p>Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.</p>
         <p id="backupStatusText">Noch kein App-Daten-Backup erstellt.</p>
       </div>
-      <div class="settings-copy">
-        <strong>Datenexport</strong>
-      </div>
-      <form id="exportForm" class="stack-form">
-        <label>
-          <span>Format</span>
-          <select id="exportFormatSelect">
-            <option value="excel">Excel</option>
-            <option value="csv">CSV</option>
-            <option value="report">HTML-Bericht</option>
-          </select>
-        </label>
-        <label>
-          <span>Zeitraum</span>
-          <select id="exportRangeType">
-            <option value="day">Tag</option>
-            <option value="week">Woche</option>
-            <option value="currentMonth">Aktueller Monat</option>
-            <option value="customMonth">Anderer Monat</option>
-          </select>
-        </label>
-        <label id="exportDayField">
-          <span>Tag</span>
-          <input id="exportDay" type="date">
-        </label>
-        <label id="exportWeekField" hidden>
-          <span>Woche</span>
-          <input id="exportWeek" type="week">
-        </label>
-        <label id="exportMonthField" hidden>
-          <span>Monat</span>
-          <input id="exportMonth" type="month">
-        </label>
-        <button class="primary-button" type="submit">Exportieren</button>
-      </form>
-      <div class="settings-actions">
-        <label>
-          <span>Rundung beim Ausbuchen</span>
-          <select id="roundingSelect">
-            <option value="5">5 Minuten</option>
-            <option value="10">10 Minuten</option>
-            <option value="15">15 Minuten</option>
-          </select>
-        </label>
-        <label>
-          <span>Sollzeit pro Tag (Stunden)</span>
-          <input id="dailyGoalInput" type="number" min="0" max="24" step="0.25" value="8">
-        </label>
-        <label>
-          <span>Sollzeit pro Woche (Stunden)</span>
-          <input id="weeklyGoalInput" type="number" min="0" max="80" step="0.25" value="40">
-        </label>
-        <label>
-          <span>Exportumfang</span>
-          <select id="exportScopeSelect">
-            <option value="all">Alle Projekte</option>
-            <option value="single">Ein Projekt</option>
-          </select>
-        </label>
-        <label id="exportProjectField" hidden>
-          <span>Projekt</span>
-          <select id="exportProjectSelect"></select>
-        </label>
-        <button id="exportDataButton" class="secondary-button" type="button">App-Daten exportieren</button>
-        <button id="importDataButton" class="secondary-button" type="button">App-Daten importieren</button>
-        <input id="importDataInput" type="file" accept="application/json" hidden>
-      </div>
-      <div class="settings-copy">
-        <strong>Gerätewechsel</strong>
-        <p>Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
-      </div>
+      <section class="settings-group">
+        <div class="settings-copy">
+          <strong>Einstellungen</strong>
+        </div>
+        <div class="settings-actions">
+          <label>
+            <span>Rundung beim Ausbuchen</span>
+            <select id="roundingSelect">
+              <option value="5">5 Minuten</option>
+              <option value="10">10 Minuten</option>
+              <option value="15">15 Minuten</option>
+            </select>
+          </label>
+          <label>
+            <span>Sollzeit pro Tag (Stunden)</span>
+            <input id="dailyGoalInput" type="number" min="0" max="24" step="0.25" value="8">
+          </label>
+          <label>
+            <span>Sollzeit pro Woche (Stunden)</span>
+            <input id="weeklyGoalInput" type="number" min="0" max="80" step="0.25" value="40">
+          </label>
+        </div>
+      </section>
+      <section class="settings-group">
+        <div class="settings-copy">
+          <strong>Datenexport</strong>
+        </div>
+        <form id="exportForm" class="stack-form">
+          <label>
+            <span>Format</span>
+            <select id="exportFormatSelect">
+              <option value="excel">Excel</option>
+              <option value="csv">CSV</option>
+              <option value="report">HTML-Bericht</option>
+            </select>
+          </label>
+          <label>
+            <span>Zeitraum</span>
+            <select id="exportRangeType">
+              <option value="day">Tag</option>
+              <option value="week">Woche</option>
+              <option value="currentMonth">Aktueller Monat</option>
+              <option value="customMonth">Anderer Monat</option>
+            </select>
+          </label>
+          <label id="exportDayField">
+            <span>Tag</span>
+            <input id="exportDay" type="date">
+          </label>
+          <label id="exportWeekField" hidden>
+            <span>Woche</span>
+            <input id="exportWeek" type="week">
+          </label>
+          <label id="exportMonthField" hidden>
+            <span>Monat</span>
+            <input id="exportMonth" type="month">
+          </label>
+          <label>
+            <span>Exportumfang</span>
+            <select id="exportScopeSelect">
+              <option value="all">Alle Projekte</option>
+              <option value="single">Ein Projekt</option>
+            </select>
+          </label>
+          <label id="exportProjectField" hidden>
+            <span>Projekt</span>
+            <select id="exportProjectSelect"></select>
+          </label>
+          <button class="primary-button" type="submit">Exportieren</button>
+        </form>
+      </section>
+      <section class="settings-group">
+        <div class="settings-copy">
+          <strong>App-Daten</strong>
+          <p>Gerätewechsel</p>
+          <p>Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
+        </div>
+        <div class="settings-actions">
+          <button id="exportDataButton" class="secondary-button" type="button">App-Daten exportieren</button>
+          <button id="importDataButton" class="secondary-button" type="button">App-Daten importieren</button>
+          <input id="importDataInput" type="file" accept="application/json" hidden>
+        </div>
+      </section>
       <div class="dialog-actions">
         <button id="closeSettingsButton" class="primary-button" type="button">Schließen</button>
       </div>

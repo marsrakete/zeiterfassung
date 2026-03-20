@@ -1,9 +1,10 @@
-const CACHE_NAME = "zeiterfassung-cache-v18";
+const CACHE_NAME = "zeiterfassung-cache-v30";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./README.md",
   "./manifest.webmanifest",
   "./icons/app-icon.svg"
 ];
@@ -24,6 +25,20 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
+    return;
+  }
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.pathname.endsWith("/README.md")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./README.md")))
+    );
     return;
   }
 
