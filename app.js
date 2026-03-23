@@ -1,7 +1,7 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
 const LAST_SEEN_BUILD_KEY = "zeiterfassung-last-seen-build";
 const APP_VERSION = "1.0.0";
-const CACHE_VERSION = "v30";
+const CACHE_VERSION = "v31";
 const DATA_SCHEMA_VERSION = 3;
 const PROJECT_COLOR_PALETTE = [
   "#011a27",
@@ -1843,10 +1843,13 @@ function renderColorPalette(container, input, selectedColor) {
     swatch.setAttribute("role", "radio");
     swatch.setAttribute("aria-checked", String(color === normalizedSelected));
     swatch.setAttribute("aria-label", `Farbe ${color}`);
-    swatch.addEventListener("click", () => {
+    const selectColor = (event) => {
+      event.preventDefault();
       input.value = color;
       renderColorPalette(container, input, color);
-    });
+    };
+    swatch.addEventListener("click", selectColor);
+    swatch.addEventListener("pointerup", selectColor);
     container.appendChild(swatch);
   }
 }

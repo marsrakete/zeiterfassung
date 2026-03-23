@@ -552,6 +552,12 @@ th {
   background: #fffaf4;
 }
 
+.dialog-body label,
+.field-group {
+  display: grid;
+  gap: 8px;
+}
+
 .color-palette {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -565,6 +571,8 @@ th {
   border-radius: 12px;
   border: 2px solid rgba(103, 74, 33, 0.16);
   box-shadow: inset 0 0 0 1px rgba(255, 250, 243, 0.55);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .color-swatch.is-selected {
