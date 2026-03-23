@@ -165,6 +165,7 @@ Die Anwendung kann in unterstützten Browsern installiert werden.
 - Die Installation erfolgt über die native Installationsfunktion des Browsers
 - Der Service Worker hält die statischen Dateien offline verfügbar
 - Nach der Installation wirkt die App wie eine eigenständige Desktop- oder Mobil-App
+- Im Bereich `Einstellungen` kann die App zusätzlich per `Auf Update prüfen` die lokale Version mit `version.json` vom Server vergleichen
 
 ## Speicherung
 

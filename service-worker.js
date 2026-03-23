@@ -1,10 +1,11 @@
-const CACHE_NAME = "zeiterfassung-cache-v31";
+const CACHE_NAME = "zeiterfassung-cache-v32";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./README.md",
+  "./version.json",
   "./manifest.webmanifest",
   "./icons/app-icon.svg"
 ];
@@ -29,7 +30,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   const requestUrl = new URL(event.request.url);
-  if (requestUrl.pathname.endsWith("/README.md")) {
+  if (requestUrl.pathname.endsWith("/README.md") || requestUrl.pathname.endsWith("/version.json")) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -37,7 +38,14 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           return response;
         })
-        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./README.md")))
+        .catch(() => caches.match(event.request).then((cached) => {
+          if (cached) {
+            return cached;
+          }
+          return requestUrl.pathname.endsWith("/version.json")
+            ? caches.match("./version.json")
+            : caches.match("./README.md");
+        }))
     );
     return;
   }

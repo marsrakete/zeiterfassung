@@ -625,6 +625,11 @@ th {
   gap: 8px;
 }
 
+.settings-status {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .note-dialog-text {
   color: var(--muted);
   white-space: pre-wrap;

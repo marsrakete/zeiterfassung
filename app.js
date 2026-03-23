@@ -1,7 +1,7 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
 const LAST_SEEN_BUILD_KEY = "zeiterfassung-last-seen-build";
 const APP_VERSION = "1.0.0";
-const CACHE_VERSION = "v31";
+const CACHE_VERSION = "v32";
 const DATA_SCHEMA_VERSION = 3;
 const PROJECT_COLOR_PALETTE = [
   "#011a27",
@@ -101,6 +101,8 @@ const elements = {
   activeSessionCancelButton: document.querySelector("#activeSessionCancelButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   closeSettingsButton: document.querySelector("#closeSettingsButton"),
+  checkForUpdatesButton: document.querySelector("#checkForUpdatesButton"),
+  updateCheckStatus: document.querySelector("#updateCheckStatus"),
   roundingSelect: document.querySelector("#roundingSelect"),
   dailyGoalInput: document.querySelector("#dailyGoalInput"),
   weeklyGoalInput: document.querySelector("#weeklyGoalInput"),
@@ -223,6 +225,47 @@ function renderVersionLabel() {
   elements.versionLabel.textContent = `Version ${APP_VERSION} · Offline-Stand ${CACHE_VERSION}`;
 }
 
+async function checkForUpdates() {
+  setUpdateCheckStatus("Prüfe auf Updates …");
+  elements.checkForUpdatesButton.disabled = true;
+
+  try {
+    const response = await fetch("./version.json", { cache: "no-cache" });
+    if (!response.ok) {
+      throw new Error("Version konnte nicht geladen werden.");
+    }
+
+    const remoteVersion = await response.json();
+    const remoteAppVersion = String(remoteVersion.appVersion || "");
+    const remoteCacheVersion = String(remoteVersion.cacheVersion || "");
+    const remoteLabel = remoteVersion.label ? String(remoteVersion.label) : "";
+    const localBuild = `${APP_VERSION}|${CACHE_VERSION}`;
+    const remoteBuild = `${remoteAppVersion}|${remoteCacheVersion}`;
+
+    if (!remoteAppVersion || !remoteCacheVersion) {
+      setUpdateCheckStatus("Die Versionsdatei vom Server ist unvollständig.");
+      return;
+    }
+
+    if (localBuild === remoteBuild) {
+      setUpdateCheckStatus("Keine neue Version gefunden. Diese App ist aktuell.");
+      return;
+    }
+
+    const suffix = remoteLabel ? ` (${remoteLabel})` : "";
+    setUpdateCheckStatus(`Neue Version verfügbar: ${remoteAppVersion} · ${remoteCacheVersion}${suffix}. Bitte App neu laden oder erneut öffnen.`);
+  } catch {
+    setUpdateCheckStatus("Update-Prüfung nicht möglich. Bitte Internetverbindung oder Server prüfen.");
+  } finally {
+    elements.checkForUpdatesButton.disabled = false;
+  }
+}
+
+function setUpdateCheckStatus(message) {
+  elements.updateCheckStatus.textContent = message;
+  elements.updateCheckStatus.hidden = !message;
+}
+
 function showUpdateNoticeIfNeeded() {
   const currentBuild = `${APP_VERSION}|${CACHE_VERSION}`;
   const lastSeenBuild = localStorage.getItem(LAST_SEEN_BUILD_KEY);
@@ -278,6 +321,7 @@ function bindEvents() {
   elements.closeSettingsButton.addEventListener("click", () => {
     elements.settingsDialog.close();
   });
+  elements.checkForUpdatesButton.addEventListener("click", checkForUpdates);
   elements.roundingSelect.addEventListener("change", handleRoundingChange);
   elements.dailyGoalInput.addEventListener("change", handleGoalChange);
   elements.weeklyGoalInput.addEventListener("change", handleGoalChange);
