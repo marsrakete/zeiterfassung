@@ -35,6 +35,7 @@ let touchDragProjectId = null;
 let touchDragTargetId = null;
 let serviceWorkerRegistration = null;
 let versionInfo = { ...DEFAULT_VERSION_INFO };
+let activeTimerReminderNotification = null;
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
@@ -576,6 +577,7 @@ function updateActiveTimer() {
   const activeProject = getActiveProject();
 
   if (!state.activeSession || !activeProject) {
+    closeTimerReminderNotification();
     elements.activeProjectName.textContent = "Kein Projekt eingebucht";
     elements.activeTimer.textContent = "00:00:00";
     return;
@@ -616,9 +618,10 @@ function maybeSendTimerReminder(activeProject, durationMs) {
     ? `${reminderHours} h ${String(remainderMinutes).padStart(2, "0")} min`
     : `${reminderHours} h`;
 
-  new Notification("Es läuft noch ein Projekt-Timer", {
+  closeTimerReminderNotification();
+  activeTimerReminderNotification = new Notification("Es läuft noch ein Projekt-Timer", {
     body: `${activeProject.name} läuft seit ${durationLabel}.`,
-    tag: `project-timer-${state.activeSession.projectId}-${reminderMinute}`,
+    tag: "active-project-timer",
     icon: "./icons/app-icon.svg"
   });
 }
@@ -630,6 +633,13 @@ function getReminderMilestoneForDuration(durationMs) {
   }
 
   return 60 + Math.floor((totalMinutes - 60) / 30) * 30;
+}
+
+function closeTimerReminderNotification() {
+  if (activeTimerReminderNotification) {
+    activeTimerReminderNotification.close();
+    activeTimerReminderNotification = null;
+  }
 }
 
 function render() {
@@ -1241,6 +1251,7 @@ function handleEntryActionClick(event) {
 
 function clockIn(projectId) {
   const nowIso = new Date().toISOString();
+  closeTimerReminderNotification();
 
   if (state.activeSession?.projectId === projectId) {
     return;
@@ -1298,6 +1309,7 @@ function handleActiveSessionSubmit(event) {
   state.activeSession.projectId = projectId;
   state.activeSession.start = start.toISOString();
   state.activeSession.lastReminderMinute = getReminderMilestoneForDuration(Math.max(Date.now() - start.getTime(), 0));
+  closeTimerReminderNotification();
   saveState();
   elements.activeSessionDialog.close();
   render();
@@ -1337,6 +1349,8 @@ function finalizeActiveSession(endIso, shouldRound = false) {
   if (!state.activeSession) {
     return { endIso, rounded: false };
   }
+
+  closeTimerReminderNotification();
 
   const start = new Date(state.activeSession.start);
   const actualEnd = new Date(endIso);
