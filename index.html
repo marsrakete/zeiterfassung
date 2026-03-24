@@ -305,6 +305,7 @@
         <div class="settings-actions">
           <button id="checkForUpdatesButton" class="secondary-button" type="button">Auf Update prüfen</button>
           <p id="updateCheckStatus" class="settings-status" hidden></p>
+          <button id="reloadAppButton" class="primary-button" type="button" hidden>Neu laden</button>
           <label>
             <span>Rundung beim Ausbuchen</span>
             <select id="roundingSelect">
@@ -312,6 +313,10 @@
               <option value="10">10 Minuten</option>
               <option value="15">15 Minuten</option>
             </select>
+          </label>
+          <label class="checkbox-row">
+            <input id="timerReminderCheckbox" type="checkbox">
+            <span>Stundenerinnerung aktivieren</span>
           </label>
           <label>
             <span>Sollzeit pro Tag (Stunden)</span>

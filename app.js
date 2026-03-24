@@ -1,8 +1,11 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
 const LAST_SEEN_BUILD_KEY = "zeiterfassung-last-seen-build";
-const APP_VERSION = "1.0.0";
-const CACHE_VERSION = "v32";
 const DATA_SCHEMA_VERSION = 3;
+const DEFAULT_VERSION_INFO = Object.freeze({
+  appVersion: "unbekannt",
+  cacheVersion: "offline",
+  label: "Lokaler Stand"
+});
 const PROJECT_COLOR_PALETTE = [
   "#011a27",
   "#4cb5f5",
@@ -30,6 +33,8 @@ let editingProjectId = null;
 let roundingNoticeTimeoutId = null;
 let touchDragProjectId = null;
 let touchDragTargetId = null;
+let serviceWorkerRegistration = null;
+let versionInfo = { ...DEFAULT_VERSION_INFO };
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
@@ -103,7 +108,9 @@ const elements = {
   closeSettingsButton: document.querySelector("#closeSettingsButton"),
   checkForUpdatesButton: document.querySelector("#checkForUpdatesButton"),
   updateCheckStatus: document.querySelector("#updateCheckStatus"),
+  reloadAppButton: document.querySelector("#reloadAppButton"),
   roundingSelect: document.querySelector("#roundingSelect"),
+  timerReminderCheckbox: document.querySelector("#timerReminderCheckbox"),
   dailyGoalInput: document.querySelector("#dailyGoalInput"),
   weeklyGoalInput: document.querySelector("#weeklyGoalInput"),
   exportScopeSelect: document.querySelector("#exportScopeSelect"),
@@ -133,11 +140,11 @@ const elements = {
 
 initializeDefaults();
 renderVersionLabel();
-showUpdateNoticeIfNeeded();
 bindEvents();
 render();
 startTicker();
 registerServiceWorker();
+loadVersionInfo({ showUpdateNotice: true });
 
 function loadState() {
   try {
@@ -156,13 +163,14 @@ function loadState() {
 function createInitialState() {
   return {
     schemaVersion: DATA_SCHEMA_VERSION,
-    version: APP_VERSION,
+    version: null,
     projects: [],
     entries: [],
     activeSession: null,
     lastStoppedSession: null,
     settings: {
       roundingMinutes: 5,
+      timerReminderEnabled: false,
       lastDataExportAt: null,
       dailyGoalHours: 8,
       weeklyGoalHours: 40
@@ -215,6 +223,8 @@ function initializeDefaults() {
   elements.exportWeek.value = toWeekInputValue(now);
   elements.exportMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   elements.roundingSelect.value = String(getRoundingMinutes());
+  elements.timerReminderCheckbox.checked = getTimerReminderEnabled();
+  elements.timerReminderCheckbox.disabled = !supportsNotificationApi();
   elements.dailyGoalInput.value = String(getDailyGoalHours());
   elements.weeklyGoalInput.value = String(getWeeklyGoalHours());
   elements.calendarDateInput.value = toDateInputValue(now);
@@ -222,7 +232,8 @@ function initializeDefaults() {
 }
 
 function renderVersionLabel() {
-  elements.versionLabel.textContent = `Version ${APP_VERSION} · Offline-Stand ${CACHE_VERSION}`;
+  const info = getVersionInfo();
+  elements.versionLabel.textContent = `Version ${info.appVersion} · Offline-Stand ${info.cacheVersion}`;
 }
 
 async function checkForUpdates() {
@@ -230,17 +241,13 @@ async function checkForUpdates() {
   elements.checkForUpdatesButton.disabled = true;
 
   try {
-    const response = await fetch("./version.json", { cache: "no-cache" });
-    if (!response.ok) {
-      throw new Error("Version konnte nicht geladen werden.");
-    }
-
-    const remoteVersion = await response.json();
+    await serviceWorkerRegistration?.update();
+    const remoteVersion = await fetchVersionInfo();
     const remoteAppVersion = String(remoteVersion.appVersion || "");
     const remoteCacheVersion = String(remoteVersion.cacheVersion || "");
     const remoteLabel = remoteVersion.label ? String(remoteVersion.label) : "";
-    const localBuild = `${APP_VERSION}|${CACHE_VERSION}`;
-    const remoteBuild = `${remoteAppVersion}|${remoteCacheVersion}`;
+    const localBuild = getBuildSignature(getVersionInfo());
+    const remoteBuild = getBuildSignature(remoteVersion);
 
     if (!remoteAppVersion || !remoteCacheVersion) {
       setUpdateCheckStatus("Die Versionsdatei vom Server ist unvollständig.");
@@ -253,7 +260,7 @@ async function checkForUpdates() {
     }
 
     const suffix = remoteLabel ? ` (${remoteLabel})` : "";
-    setUpdateCheckStatus(`Neue Version verfügbar: ${remoteAppVersion} · ${remoteCacheVersion}${suffix}. Bitte App neu laden oder erneut öffnen.`);
+    setUpdateCheckStatus(`Neue Version verfügbar: ${remoteAppVersion} · ${remoteCacheVersion}${suffix}. Bitte jetzt neu laden.`, true);
   } catch {
     setUpdateCheckStatus("Update-Prüfung nicht möglich. Bitte Internetverbindung oder Server prüfen.");
   } finally {
@@ -261,13 +268,14 @@ async function checkForUpdates() {
   }
 }
 
-function setUpdateCheckStatus(message) {
+function setUpdateCheckStatus(message, showReloadButton = false) {
   elements.updateCheckStatus.textContent = message;
   elements.updateCheckStatus.hidden = !message;
+  elements.reloadAppButton.hidden = !showReloadButton;
 }
 
-function showUpdateNoticeIfNeeded() {
-  const currentBuild = `${APP_VERSION}|${CACHE_VERSION}`;
+function showUpdateNoticeIfNeeded(nextVersionInfo = getVersionInfo()) {
+  const currentBuild = getBuildSignature(nextVersionInfo);
   const lastSeenBuild = localStorage.getItem(LAST_SEEN_BUILD_KEY);
 
   if (!lastSeenBuild) {
@@ -286,6 +294,42 @@ function showUpdateNoticeIfNeeded() {
     elements.roundingNotice.hidden = true;
   }, 5000);
   localStorage.setItem(LAST_SEEN_BUILD_KEY, currentBuild);
+}
+
+function getVersionInfo() {
+  return versionInfo;
+}
+
+function getBuildSignature(info = getVersionInfo()) {
+  return `${info.appVersion}|${info.cacheVersion}`;
+}
+
+async function fetchVersionInfo() {
+  const response = await fetch("./version.json", { cache: "no-cache" });
+  if (!response.ok) {
+    throw new Error("Version konnte nicht geladen werden.");
+  }
+  const remoteVersion = await response.json();
+  return {
+    appVersion: String(remoteVersion.appVersion || DEFAULT_VERSION_INFO.appVersion),
+    cacheVersion: String(remoteVersion.cacheVersion || DEFAULT_VERSION_INFO.cacheVersion),
+    label: remoteVersion.label ? String(remoteVersion.label) : DEFAULT_VERSION_INFO.label
+  };
+}
+
+async function loadVersionInfo({ showUpdateNotice = false } = {}) {
+  let versionLoaded = false;
+  try {
+    versionInfo = await fetchVersionInfo();
+    versionLoaded = true;
+  } catch {
+    versionInfo = { ...DEFAULT_VERSION_INFO };
+  }
+
+  renderVersionLabel();
+  if (showUpdateNotice && versionLoaded) {
+    showUpdateNoticeIfNeeded(versionInfo);
+  }
 }
 
 function bindEvents() {
@@ -322,7 +366,12 @@ function bindEvents() {
     elements.settingsDialog.close();
   });
   elements.checkForUpdatesButton.addEventListener("click", checkForUpdates);
+  elements.reloadAppButton.addEventListener("click", async () => {
+    await serviceWorkerRegistration?.update();
+    window.location.reload();
+  });
   elements.roundingSelect.addEventListener("change", handleRoundingChange);
+  elements.timerReminderCheckbox.addEventListener("change", handleTimerReminderToggle);
   elements.dailyGoalInput.addEventListener("change", handleGoalChange);
   elements.weeklyGoalInput.addEventListener("change", handleGoalChange);
   elements.exportScopeSelect.addEventListener("change", updateExportFields);
@@ -411,6 +460,11 @@ function handleManualEntrySubmit(event) {
     return;
   }
 
+  const conflicts = findConflictingEntries(start, end);
+  if (conflicts.length && !window.confirm(buildConflictWarningMessage(conflicts))) {
+    return;
+  }
+
   state.entries.unshift({
     id: createId(),
     projectId,
@@ -424,6 +478,50 @@ function handleManualEntrySubmit(event) {
   elements.manualNote.value = "";
   saveState();
   render();
+}
+
+function findConflictingEntries(start, end, ignoreEntryId = null) {
+  const conflicts = state.entries
+    .filter((entry) => entry.end)
+    .filter((entry) => !ignoreEntryId || entry.id !== ignoreEntryId)
+    .filter((entry) => rangesOverlap(start, end, new Date(entry.start), new Date(entry.end)))
+    .map((entry) => ({
+      type: "entry",
+      projectName: findProject(entry.projectId)?.name || "Unbekanntes Projekt",
+      start: entry.start,
+      end: entry.end
+    }));
+
+  if (state.activeSession) {
+    const activeStart = new Date(state.activeSession.start);
+    const activeEnd = new Date();
+    if (rangesOverlap(start, end, activeStart, activeEnd)) {
+      conflicts.unshift({
+        type: "active",
+        projectName: findProject(state.activeSession.projectId)?.name || "Unbekanntes Projekt",
+        start: state.activeSession.start,
+        end: activeEnd.toISOString()
+      });
+    }
+  }
+
+  return conflicts;
+}
+
+function rangesOverlap(startA, endA, startB, endB) {
+  return startA < endB && endA > startB;
+}
+
+function buildConflictWarningMessage(conflicts) {
+  const preview = conflicts
+    .slice(0, 3)
+    .map((conflict) => {
+      const prefix = conflict.type === "active" ? "Laufend" : "Block";
+      return `${prefix}: ${conflict.projectName} (${formatDateTime(conflict.start)} – ${formatDateTime(conflict.end)})`;
+    })
+    .join("\n");
+  const more = conflicts.length > 3 ? `\n… und ${conflicts.length - 3} weitere Überschneidungen.` : "";
+  return `Achtung: Der manuelle Zeitblock überschneidet sich mit vorhandenen Buchungen.\n\n${preview}${more}\n\nTrotzdem speichern?`;
 }
 
 async function handleExportSubmit(event) {
@@ -487,10 +585,57 @@ function updateActiveTimer() {
   const durationMs = Math.max(Date.now() - startedAt.getTime(), 0);
   elements.activeProjectName.textContent = activeProject.name;
   elements.activeTimer.textContent = formatDuration(durationMs, true);
+  maybeSendTimerReminder(activeProject, durationMs);
+}
+
+function maybeSendTimerReminder(activeProject, durationMs) {
+  if (!state.activeSession || !activeProject || !getTimerReminderEnabled() || !supportsNotificationApi()) {
+    return;
+  }
+
+  if (Notification.permission !== "granted") {
+    return;
+  }
+
+  const reminderMinute = getReminderMilestoneForDuration(durationMs);
+  if (!reminderMinute) {
+    return;
+  }
+
+  const lastReminderMinute = Number(state.activeSession.lastReminderMinute) || 0;
+  if (reminderMinute <= lastReminderMinute) {
+    return;
+  }
+
+  state.activeSession.lastReminderMinute = reminderMinute;
+  saveState();
+
+  const reminderHours = Math.floor(reminderMinute / 60);
+  const remainderMinutes = reminderMinute % 60;
+  const durationLabel = remainderMinutes
+    ? `${reminderHours} h ${String(remainderMinutes).padStart(2, "0")} min`
+    : `${reminderHours} h`;
+
+  new Notification("Es läuft noch ein Projekt-Timer", {
+    body: `${activeProject.name} läuft seit ${durationLabel}.`,
+    tag: `project-timer-${state.activeSession.projectId}-${reminderMinute}`,
+    icon: "./icons/app-icon.svg"
+  });
+}
+
+function getReminderMilestoneForDuration(durationMs) {
+  const totalMinutes = Math.floor(durationMs / 60000);
+  if (totalMinutes < 60) {
+    return 0;
+  }
+
+  return 60 + Math.floor((totalMinutes - 60) / 30) * 30;
 }
 
 function render() {
   elements.roundingSelect.value = String(getRoundingMinutes());
+  elements.timerReminderCheckbox.checked = getTimerReminderEnabled();
+  elements.timerReminderCheckbox.disabled = !supportsNotificationApi();
   elements.dailyGoalInput.value = String(getDailyGoalHours());
   elements.weeklyGoalInput.value = String(getWeeklyGoalHours());
   renderBackupStatus();
@@ -731,16 +876,21 @@ async function loadHelpContent() {
 function renderMarkdownAsHtml(markdown) {
   const lines = markdown.replace(/\r/g, "").split("\n");
   const parts = [];
+  let listType = null;
   let listItems = [];
   let paragraphLines = [];
   let codeLines = [];
+  let blockquoteLines = [];
+  let tableLines = [];
   let inCodeBlock = false;
 
   const flushList = () => {
     if (!listItems.length) {
       return;
     }
-    parts.push(`<ul>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`);
+    const tag = listType || "ul";
+    parts.push(`<${tag}>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</${tag}>`);
+    listType = null;
     listItems = [];
   };
 
@@ -760,10 +910,39 @@ function renderMarkdownAsHtml(markdown) {
     codeLines = [];
   };
 
+  const flushBlockquote = () => {
+    if (!blockquoteLines.length) {
+      return;
+    }
+    parts.push(`<blockquote>${renderInlineMarkdown(blockquoteLines.join(" "))}</blockquote>`);
+    blockquoteLines = [];
+  };
+
+  const flushTable = () => {
+    if (tableLines.length < 2 || !/^\s*\|?[\s:-]+\|[\s|:-]*$/.test(tableLines[1])) {
+      paragraphLines.push(...tableLines);
+      tableLines = [];
+      return;
+    }
+
+    const rows = tableLines.map((line) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+    const [header, , ...body] = rows;
+    const headerMarkup = header.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join("");
+    const bodyMarkup = body.map((row) => `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join("")}</tr>`).join("");
+    parts.push(`<table><thead><tr>${headerMarkup}</tr></thead><tbody>${bodyMarkup}</tbody></table>`);
+    tableLines = [];
+  };
+
+  const flushAll = () => {
+    flushList();
+    flushParagraph();
+    flushBlockquote();
+    flushTable();
+  };
+
   for (const line of lines) {
     if (line.startsWith("```")) {
-      flushList();
-      flushParagraph();
+      flushAll();
       if (inCodeBlock) {
         flushCode();
       }
@@ -777,38 +956,80 @@ function renderMarkdownAsHtml(markdown) {
     }
 
     if (!line.trim()) {
-      flushList();
-      flushParagraph();
+      flushAll();
       continue;
     }
 
     const headingMatch = /^(#{1,3})\s+(.+)$/.exec(line);
     if (headingMatch) {
-      flushList();
-      flushParagraph();
+      flushAll();
       const level = headingMatch[1].length;
       parts.push(`<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`);
       continue;
     }
 
-    const listMatch = /^-\s+(.+)$/.exec(line);
-    if (listMatch) {
+    if (/^\|.+\|\s*$/.test(line.trim())) {
+      flushList();
       flushParagraph();
-      listItems.push(listMatch[1]);
+      flushBlockquote();
+      tableLines.push(line);
       continue;
     }
 
-    if (line.startsWith("![")) {
+    flushTable();
+
+    const unorderedListMatch = /^[-*]\s+(.+)$/.exec(line);
+    if (unorderedListMatch) {
+      flushParagraph();
+      flushBlockquote();
+      if (listType && listType !== "ul") {
+        flushList();
+      }
+      listType = "ul";
+      listItems.push(unorderedListMatch[1]);
+      continue;
+    }
+
+    const orderedListMatch = /^\d+\.\s+(.+)$/.exec(line);
+    if (orderedListMatch) {
+      flushParagraph();
+      flushBlockquote();
+      if (listType && listType !== "ol") {
+        flushList();
+      }
+      listType = "ol";
+      listItems.push(orderedListMatch[1]);
+      continue;
+    }
+
+    const blockquoteMatch = /^>\s?(.*)$/.exec(line);
+    if (blockquoteMatch) {
       flushList();
       flushParagraph();
+      blockquoteLines.push(blockquoteMatch[1]);
+      continue;
+    }
+
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+      flushAll();
+      parts.push("<hr>");
+      continue;
+    }
+
+    const imageMatch = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(line.trim());
+    if (imageMatch) {
+      flushAll();
+      const src = sanitizeMarkdownUrl(imageMatch[2]);
+      if (src) {
+        parts.push(`<figure><img src="${escapeAttribute(src)}" alt="${escapeAttribute(imageMatch[1])}" loading="lazy"></figure>`);
+      }
       continue;
     }
 
     paragraphLines.push(line.trim());
   }
 
-  flushList();
-  flushParagraph();
+  flushAll();
   flushCode();
   return parts.join("");
 }
@@ -816,13 +1037,30 @@ function renderMarkdownAsHtml(markdown) {
 function renderInlineMarkdown(text) {
   let html = escapeHtml(text);
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+  html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/(^|[^\*])\*([^*]+)\*/g, "$1<em>$2</em>");
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, href) => {
-    if (/^https?:\/\//i.test(href)) {
-      return `<a href="${href}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`;
+    const safeHref = sanitizeMarkdownUrl(href);
+    if (safeHref) {
+      const external = /^https?:\/\//i.test(safeHref);
+      return `<a href="${escapeAttribute(safeHref)}"${external ? ' target="_blank" rel="noreferrer"' : ""}>${escapeHtml(label)}</a>`;
     }
     return escapeHtml(label);
   });
   return html;
+}
+
+function sanitizeMarkdownUrl(url) {
+  if (typeof url !== "string") {
+    return "";
+  }
+
+  const trimmed = url.trim();
+  if (!trimmed || /^javascript:/i.test(trimmed)) {
+    return "";
+  }
+
+  return trimmed;
 }
 
 function renderTotals() {
@@ -1013,7 +1251,7 @@ function clockIn(projectId) {
     maybeShowRoundingNotice(finalized);
   }
 
-  state.activeSession = { projectId, start: nowIso };
+  state.activeSession = { projectId, start: nowIso, lastReminderMinute: 0 };
   if (state.lastStoppedSession?.projectId === projectId) {
     state.lastStoppedSession = null;
   }
@@ -1059,6 +1297,7 @@ function handleActiveSessionSubmit(event) {
 
   state.activeSession.projectId = projectId;
   state.activeSession.start = start.toISOString();
+  state.activeSession.lastReminderMinute = getReminderMilestoneForDuration(Math.max(Date.now() - start.getTime(), 0));
   saveState();
   elements.activeSessionDialog.close();
   render();
@@ -1086,7 +1325,8 @@ function resumeLastStoppedProject() {
 
   state.activeSession = {
     projectId: lastProjectId,
-    start: new Date().toISOString()
+    start: new Date().toISOString(),
+    lastReminderMinute: 0
   };
   state.lastStoppedSession = null;
   saveState();
@@ -1244,10 +1484,11 @@ function handleRoundingChange() {
 }
 
 async function exportAppData() {
+  const info = getVersionInfo();
   const payload = {
     exportedAt: new Date().toISOString(),
     app: "Projekt-Zeiterfassung",
-    version: APP_VERSION,
+    version: info.appVersion,
     schemaVersion: DATA_SCHEMA_VERSION,
     data: {
       schemaVersion: state.schemaVersion,
@@ -1413,7 +1654,7 @@ function normalizeState(rawState) {
 
   return {
     schemaVersion: rawState.schemaVersion || DATA_SCHEMA_VERSION,
-    version: rawState.version || APP_VERSION,
+    version: rawState.version || getVersionInfo().appVersion,
     projects: projects.map((project) => {
       const id = project.id || createId();
       return {
@@ -1433,10 +1674,19 @@ function normalizeState(rawState) {
       note: entry.note || "",
       createdAt: entry.createdAt || new Date().toISOString()
     })),
-    activeSession: rawState.activeSession || null,
+    activeSession: rawState.activeSession
+      ? {
+          projectId: rawState.activeSession.projectId,
+          start: rawState.activeSession.start,
+          lastReminderMinute: rawState.activeSession.lastReminderMinute ?? getReminderMilestoneForDuration(
+            Math.max(Date.now() - new Date(rawState.activeSession.start).getTime(), 0)
+          )
+        }
+      : null,
     lastStoppedSession: rawState.lastStoppedSession || null,
     settings: {
       roundingMinutes: rawState.settings?.roundingMinutes || fallback.settings.roundingMinutes,
+      timerReminderEnabled: rawState.settings?.timerReminderEnabled ?? fallback.settings.timerReminderEnabled,
       lastDataExportAt: rawState.settings?.lastDataExportAt || null,
       dailyGoalHours: rawState.settings?.dailyGoalHours ?? fallback.settings.dailyGoalHours,
       weeklyGoalHours: rawState.settings?.weeklyGoalHours ?? fallback.settings.weeklyGoalHours
@@ -1460,6 +1710,14 @@ function normalizeProjectName(name) {
 
 function getRoundingMinutes() {
   return Number(state.settings?.roundingMinutes) || 5;
+}
+
+function getTimerReminderEnabled() {
+  return Boolean(state.settings?.timerReminderEnabled);
+}
+
+function supportsNotificationApi() {
+  return typeof Notification !== "undefined";
 }
 
 function renderBackupStatus() {
@@ -1491,6 +1749,46 @@ function handleGoalChange() {
   state.settings.weeklyGoalHours = Number(elements.weeklyGoalInput.value) || 0;
   saveState();
   renderGoalStatus();
+}
+
+async function handleTimerReminderToggle() {
+  if (!elements.timerReminderCheckbox.checked) {
+    state.settings.timerReminderEnabled = false;
+    saveState();
+    return;
+  }
+
+  if (!supportsNotificationApi()) {
+    alert("Systembenachrichtigungen werden auf diesem Gerät oder in diesem Browser nicht unterstützt.");
+    elements.timerReminderCheckbox.checked = false;
+    state.settings.timerReminderEnabled = false;
+    saveState();
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    state.settings.timerReminderEnabled = true;
+    saveState();
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    alert("Benachrichtigungen sind im Browser blockiert. Bitte erlaube sie in den Browser-Einstellungen.");
+    elements.timerReminderCheckbox.checked = false;
+    state.settings.timerReminderEnabled = false;
+    saveState();
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  const enabled = permission === "granted";
+  state.settings.timerReminderEnabled = enabled;
+  elements.timerReminderCheckbox.checked = enabled;
+  saveState();
+
+  if (!enabled) {
+    alert("Ohne Benachrichtigungsfreigabe kann die Stundenerinnerung nicht aktiviert werden.");
+  }
 }
 
 function renderGoalStatus() {
@@ -1869,6 +2167,19 @@ function normalizeHexColor(value) {
   return /^#[0-9a-f]{6}$/.test(normalized) ? normalized : "";
 }
 
+function getReadableTextColor(hexColor) {
+  const normalized = normalizeHexColor(hexColor);
+  if (!normalized) {
+    return "#1f1f1f";
+  }
+
+  const red = Number.parseInt(normalized.slice(1, 3), 16);
+  const green = Number.parseInt(normalized.slice(3, 5), 16);
+  const blue = Number.parseInt(normalized.slice(5, 7), 16);
+  const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
+  return brightness < 150 ? "#ffffff" : "#1f1f1f";
+}
+
 function renderColorPalette(container, input, selectedColor) {
   if (!container || !input) {
     return;
@@ -2162,6 +2473,7 @@ function mergeImportedData(importedState) {
   state.settings = {
     ...state.settings,
     roundingMinutes: normalizedImport.settings?.roundingMinutes || state.settings.roundingMinutes,
+    timerReminderEnabled: normalizedImport.settings?.timerReminderEnabled ?? state.settings.timerReminderEnabled,
     dailyGoalHours: normalizedImport.settings?.dailyGoalHours ?? state.settings.dailyGoalHours,
     weeklyGoalHours: normalizedImport.settings?.weeklyGoalHours ?? state.settings.weeklyGoalHours,
     lastDataExportAt: state.settings.lastDataExportAt
@@ -2198,7 +2510,15 @@ function createMonthlyReportHtml(rows, label) {
 
   const daySections = [...groupedByDay.entries()].map(([date, items]) => {
     const totalHours = items.reduce((sum, item) => sum + Number.parseFloat(item.durationHours.replace(",", ".")), 0);
-    const list = items.map((item) => `<tr><td>${escapeHtml(item.project)}</td><td>${escapeHtml(item.start)}</td><td>${escapeHtml(item.end)}</td><td>${escapeHtml(item.durationClock)}</td><td>${escapeHtml(item.note || "—")}</td></tr>`).join("");
+    const list = items.map((item) => `
+      <tr class="project-row" style="--project-color:${item.projectColor}">
+        <td>${renderProjectLabelMarkup(item.project, item.projectColor)}</td>
+        <td>${escapeHtml(item.start)}</td>
+        <td>${escapeHtml(item.end)}</td>
+        <td>${escapeHtml(item.durationClock)}</td>
+        <td>${escapeHtml(item.note || "—")}</td>
+      </tr>
+    `).join("");
     return `
       <section>
         <h2>${escapeHtml(date)}</h2>
@@ -2211,7 +2531,13 @@ function createMonthlyReportHtml(rows, label) {
     `;
   }).join("");
 
-  const projectSummary = summarizeRowsByProject(rows).map((item) => `<tr><td>${escapeHtml(item.project)}</td><td>${escapeHtml(item.durationClock)}</td><td>${escapeHtml(item.durationHours)}</td></tr>`).join("");
+  const projectSummary = summarizeRowsByProject(rows).map((item) => `
+    <tr class="project-row summary-row" style="--project-color:${item.projectColor}">
+      <td>${renderProjectLabelMarkup(item.project, item.projectColor)}</td>
+      <td>${escapeHtml(item.durationClock)}</td>
+      <td>${escapeHtml(item.durationHours)}</td>
+    </tr>
+  `).join("");
 
   return `<!doctype html>
 <html lang="de">
@@ -2228,6 +2554,8 @@ function createMonthlyReportHtml(rows, label) {
     table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
     th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
     th { text-transform: uppercase; font-size: 12px; letter-spacing: 0.06em; color: #6b5c4d; }
+    .project-row td:first-child { border-left: 6px solid var(--project-color); }
+    .project-label { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -2246,6 +2574,11 @@ function createMonthlyReportHtml(rows, label) {
   </div>
 </body>
 </html>`;
+}
+
+function renderProjectLabelMarkup(projectName, projectColor) {
+  const color = normalizeHexColor(projectColor) || getFallbackProjectColor(projectName);
+  return `<span class="project-label"><span class="swatch" style="background:${color}"></span>${escapeHtml(projectName)}</span>`;
 }
 
 
@@ -2347,10 +2680,11 @@ function clipEntryToRange(entry, rangeStart, rangeEnd) {
 function createSpreadsheetXml(rows, label, includeProjectSheets = false) {
   const totalHours = rows.reduce((sum, row) => sum + Number.parseFloat(row.durationHours.replace(",", ".")), 0);
   const chartData = buildChartDataFromRows(rows);
+  const { styleMap, stylesMarkup } = createSpreadsheetProjectStyles(rows, chartData);
   const dataRows = rows.map((row) => `
     <Row>
       <Cell><Data ss:Type="String">${escapeXml(row.date)}</Data></Cell>
-      <Cell><Data ss:Type="String">${escapeXml(row.project)}</Data></Cell>
+      <Cell${getSpreadsheetStyleAttribute(row.projectColor, styleMap)}><Data ss:Type="String">${escapeXml(row.project)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(row.start)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(row.end)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(row.durationHours)}</Data></Cell>
@@ -2361,21 +2695,21 @@ function createSpreadsheetXml(rows, label, includeProjectSheets = false) {
 
   const summaryRows = summarizeRowsByProject(rows).map((item) => `
     <Row>
-      <Cell><Data ss:Type="String">${escapeXml(item.project)}</Data></Cell>
+      <Cell${getSpreadsheetStyleAttribute(item.projectColor, styleMap)}><Data ss:Type="String">${escapeXml(item.project)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(item.durationClock)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(item.durationHours)}</Data></Cell>
     </Row>`).join("");
 
   const statisticRows = chartData.map((item) => `
     <Row>
-      <Cell><Data ss:Type="String">${escapeXml(item.name)}</Data></Cell>
+      <Cell${getSpreadsheetStyleAttribute(item.color, styleMap)}><Data ss:Type="String">${escapeXml(item.name)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(formatDuration(item.durationMs))}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml((item.durationMs / 3600000).toFixed(2).replace(".", ","))}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(item.percent)}</Data></Cell>
     </Row>`).join("");
 
   const projectSheets = includeProjectSheets
-    ? summarizeRowsIntoSheets(rows)
+    ? summarizeRowsIntoSheets(rows, styleMap)
     : "";
 
   return `<?xml version="1.0"?>
@@ -2384,21 +2718,31 @@ function createSpreadsheetXml(rows, label, includeProjectSheets = false) {
  xmlns:o="urn:schemas-microsoft-com:office:office"
  xmlns:x="urn:schemas-microsoft-com:office:excel"
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="Header">
+      <Font ss:Bold="1" />
+      <Interior ss:Color="#efe6da" ss:Pattern="Solid" />
+    </Style>
+    <Style ss:ID="Title">
+      <Font ss:Bold="1" ss:Size="12" />
+    </Style>
+    ${stylesMarkup}
+  </Styles>
   <Worksheet ss:Name="Zeiten">
     <Table>
       <Row>
-        <Cell><Data ss:Type="String">Export</Data></Cell>
-        <Cell><Data ss:Type="String">${escapeXml(label)}</Data></Cell>
+        <Cell ss:StyleID="Title"><Data ss:Type="String">Export</Data></Cell>
+        <Cell ss:StyleID="Title"><Data ss:Type="String">${escapeXml(label)}</Data></Cell>
       </Row>
       <Row>
-        <Cell><Data ss:Type="String">Datum</Data></Cell>
-        <Cell><Data ss:Type="String">Projekt</Data></Cell>
-        <Cell><Data ss:Type="String">Start</Data></Cell>
-        <Cell><Data ss:Type="String">Ende</Data></Cell>
-        <Cell><Data ss:Type="String">Dauer (h)</Data></Cell>
-        <Cell><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
-        <Cell><Data ss:Type="String">Typ</Data></Cell>
-        <Cell><Data ss:Type="String">Notiz</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Datum</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Projekt</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Start</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Ende</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (h)</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Typ</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Notiz</Data></Cell>
       </Row>
       ${dataRows}
     </Table>
@@ -2406,25 +2750,25 @@ function createSpreadsheetXml(rows, label, includeProjectSheets = false) {
   <Worksheet ss:Name="Summen">
     <Table>
       <Row>
-        <Cell><Data ss:Type="String">Projekt</Data></Cell>
-        <Cell><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
-        <Cell><Data ss:Type="String">Dauer (h)</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Projekt</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (h)</Data></Cell>
       </Row>
       ${summaryRows}
       <Row>
-        <Cell><Data ss:Type="String">Gesamt</Data></Cell>
-        <Cell><Data ss:Type="String">${escapeXml(formatDuration(totalHours * 3600000))}</Data></Cell>
-        <Cell><Data ss:Type="String">${escapeXml(totalHours.toFixed(2).replace(".", ","))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Gesamt</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(formatDuration(totalHours * 3600000))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(totalHours.toFixed(2).replace(".", ","))}</Data></Cell>
       </Row>
     </Table>
   </Worksheet>
   <Worksheet ss:Name="Statistik">
     <Table>
       <Row>
-        <Cell><Data ss:Type="String">Projekt</Data></Cell>
-        <Cell><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
-        <Cell><Data ss:Type="String">Dauer (h)</Data></Cell>
-        <Cell><Data ss:Type="String">Anteil</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Projekt</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (h)</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Anteil</Data></Cell>
       </Row>
       ${statisticRows}
     </Table>
@@ -2438,19 +2782,26 @@ function summarizeRowsByProject(rows) {
 
   for (const row of rows) {
     const hours = Number.parseFloat(row.durationHours.replace(",", "."));
-    totals.set(row.project, (totals.get(row.project) || 0) + hours);
+    const current = totals.get(row.project) || {
+      project: row.project,
+      projectColor: row.projectColor || getFallbackProjectColor(row.project),
+      hours: 0
+    };
+    current.hours += hours;
+    totals.set(row.project, current);
   }
 
-  return [...totals.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0], "de"))
-    .map(([project, hours]) => ({
-      project,
-      durationHours: hours.toFixed(2).replace(".", ","),
-      durationClock: formatDuration(hours * 3600000)
+  return [...totals.values()]
+    .sort((left, right) => left.project.localeCompare(right.project, "de"))
+    .map((item) => ({
+      project: item.project,
+      projectColor: item.projectColor,
+      durationHours: item.hours.toFixed(2).replace(".", ","),
+      durationClock: formatDuration(item.hours * 3600000)
     }));
 }
 
-function summarizeRowsIntoSheets(rows) {
+function summarizeRowsIntoSheets(rows, styleMap) {
   const rowsByProject = new Map();
   for (const row of rows) {
     const items = rowsByProject.get(row.project) || [];
@@ -2460,6 +2811,7 @@ function summarizeRowsIntoSheets(rows) {
 
   return [...rowsByProject.entries()].map(([project, projectRows]) => {
     const safeName = project.replace(/[\\/*?:[\]]/g, "").slice(0, 28) || "Projekt";
+    const projectColor = projectRows[0]?.projectColor || getFallbackProjectColor(project);
     const dataRows = projectRows.map((row) => `
       <Row>
         <Cell><Data ss:Type="String">${escapeXml(row.date)}</Data></Cell>
@@ -2473,16 +2825,50 @@ function summarizeRowsIntoSheets(rows) {
   <Worksheet ss:Name="${escapeXml(safeName)}">
     <Table>
       <Row>
-        <Cell><Data ss:Type="String">Datum</Data></Cell>
-        <Cell><Data ss:Type="String">Start</Data></Cell>
-        <Cell><Data ss:Type="String">Ende</Data></Cell>
-        <Cell><Data ss:Type="String">Dauer</Data></Cell>
-        <Cell><Data ss:Type="String">Notiz</Data></Cell>
+        <Cell${getSpreadsheetStyleAttribute(projectColor, styleMap)}><Data ss:Type="String">${escapeXml(project)}</Data></Cell>
+        <Cell><Data ss:Type="String"></Data></Cell>
+        <Cell><Data ss:Type="String"></Data></Cell>
+        <Cell><Data ss:Type="String"></Data></Cell>
+        <Cell><Data ss:Type="String"></Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Datum</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Start</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Ende</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">Notiz</Data></Cell>
       </Row>
       ${dataRows}
     </Table>
   </Worksheet>`;
   }).join("");
+}
+
+function createSpreadsheetProjectStyles(rows, chartData) {
+  const colors = [...new Set([
+    ...rows.map((row) => normalizeHexColor(row.projectColor)).filter(Boolean),
+    ...chartData.map((item) => normalizeHexColor(item.color)).filter(Boolean)
+  ])];
+  const styleMap = new Map();
+  const stylesMarkup = colors.map((color, index) => {
+    const styleId = `ProjectColor${index + 1}`;
+    styleMap.set(color, styleId);
+    return `
+    <Style ss:ID="${styleId}">
+      <Font ss:Bold="1" ss:Color="${getReadableTextColor(color)}" />
+      <Interior ss:Color="${color}" ss:Pattern="Solid" />
+    </Style>`;
+  }).join("");
+  return { styleMap, stylesMarkup };
+}
+
+function getSpreadsheetStyleAttribute(color, styleMap) {
+  const normalized = normalizeHexColor(color);
+  if (!normalized) {
+    return "";
+  }
+  const styleId = styleMap.get(normalized);
+  return styleId ? ` ss:StyleID="${styleId}"` : "";
 }
 
 function sumRangeDuration(rangeStart, rangeEnd) {
@@ -2607,14 +2993,22 @@ function escapeXml(value) {
   return escapeHtml(value);
 }
 
+function escapeAttribute(value) {
+  return escapeHtml(value);
+}
+
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) {
     return;
   }
 
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {
-      // Registrierung darf die App nicht blockieren.
-    });
+    navigator.serviceWorker.register("./service-worker.js")
+      .then((registration) => {
+        serviceWorkerRegistration = registration;
+      })
+      .catch(() => {
+        // Registrierung darf die App nicht blockieren.
+      });
   });
 }

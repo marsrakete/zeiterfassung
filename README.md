@@ -69,6 +69,7 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 - `Ausbuchen` stoppt das aktuell laufende Projekt explizit
 - Laufende Zeitblöcke können direkt bearbeitet oder gestoppt werden
 - Ein gestopptes Projekt kann danach über `Letztes Projekt fortsetzen` direkt wieder gestartet werden
+- Optional kann eine Systembenachrichtigung aktiviert werden: nach 1 Stunde Laufzeit und danach alle 30 Minuten erscheint `Es läuft noch ein Projekt-Timer`
 
 ### 3. Zeitblöcke manuell nachtragen
 
@@ -78,6 +79,7 @@ Ein Zeitblock kann mit folgenden Angaben gespeichert werden:
 - Start
 - Ende
 - Notiz
+- Bei Überschneidungen mit vorhandenen Zeitblöcken zeigt die App vor dem Speichern eine Warnung an
 
 ### 4. Übersicht nutzen
 
@@ -142,6 +144,8 @@ Verfügbare Formate:
 - CSV
 - HTML-Bericht mit Tagesabschnitten, Projektsummen und eingebetteter Statistik
 
+Projektfarben werden dabei in Summen und Statistik auch im Export sichtbar mitgeführt.
+
 Die Exportdateien werden über die Teilen-Funktion des Geräts oder Browsers angeboten. Dadurch können sie direkt an E-Mail, Messenger oder andere kompatible Apps übergeben werden. Falls die Teilen-Funktion nicht verfügbar ist, wird automatisch ein normaler Download verwendet.
 
 Beim Monats-Excel-Export für alle Projekte wird zusätzlich eine Sammelmappe mit einzelnen Projekt-Blättern erzeugt.
@@ -151,6 +155,7 @@ Beim Monats-Excel-Export für alle Projekte wird zusätzlich eine Sammelmappe mi
 Im Bereich `Daten & Export` gibt es zusätzlich:
 
 - eine Rundungseinstellung für das Ausbuchen auf 5, 10 oder 15 Minuten
+- eine zuschaltbare Stundenerinnerung für laufende Projekte über die Notification-API des Browsers
 - tägliche und wöchentliche Sollzeiten
 - einen Backup-Status mit Hinweis auf das letzte exportierte App-Daten-Backup
 - `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
@@ -165,7 +170,8 @@ Die Anwendung kann in unterstützten Browsern installiert werden.
 - Die Installation erfolgt über die native Installationsfunktion des Browsers
 - Der Service Worker hält die statischen Dateien offline verfügbar
 - Nach der Installation wirkt die App wie eine eigenständige Desktop- oder Mobil-App
-- Im Bereich `Einstellungen` kann die App zusätzlich per `Auf Update prüfen` die lokale Version mit `version.json` vom Server vergleichen
+- Die sichtbare Versionsanzeige und die Update-Prüfung lesen denselben Stand aus `version.json`
+- Im Bereich `Einstellungen` kann die App zusätzlich per `Auf Update prüfen` die lokale Version mit `version.json` vom Server vergleichen und bei einer neuen Version direkt `Neu laden` anbieten
 
 ## Speicherung
 
@@ -193,4 +199,5 @@ Für wichtige Daten empfiehlt sich zusätzlich ein regelmäßiger Export der App
 - Beim Monats-Excel-Export für alle Projekte werden zusätzliche Projekt-Blätter erzeugt
 - CSV und ein HTML-Bericht stehen zusätzlich als Exportformate zur Verfügung
 - Der Import von App-Daten führt Daten zusammen und erkennt Dubletten
+- Die integrierte Hilfe rendert das README direkt in der App und bleibt dadurch mit der Dokumentation synchron
 - Die App benötigt keinen Build-Prozess und kann direkt als statische Webanwendung betrieben werden
