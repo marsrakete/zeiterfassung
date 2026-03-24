@@ -208,6 +208,10 @@ h1, h2, h3, p { margin: 0; }
   flex-wrap: wrap;
 }
 
+.project-toolbar {
+  margin-bottom: 18px;
+}
+
 .project-toolbar label,
 .overview-actions label,
 .chart-toolbar label {
