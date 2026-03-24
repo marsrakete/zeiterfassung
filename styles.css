@@ -261,6 +261,12 @@ button:disabled {
   gap: 14px;
 }
 
+.project-footer-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 22px;
+}
+
 .panel-projects {
   grid-column: 1 / -1;
 }
@@ -345,6 +351,12 @@ button:disabled {
 .overview-actions {
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+.overview-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 22px;
 }
 
 .project-name {
@@ -925,6 +937,12 @@ th {
   .overview-actions {
     justify-content: stretch;
   }
+  .project-footer-actions,
+  .overview-footer-actions {
+    justify-content: stretch;
+  }
+  .project-footer-actions button,
+  .overview-footer-actions button,
   .overview-actions button,
   .overview-actions label,
   .project-toolbar label,

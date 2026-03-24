@@ -65,9 +65,11 @@
               <option value="empty">Heute ohne Buchung</option>
             </select>
           </label>
-          <button id="newProjectButton" class="primary-button" type="button">Neues Projekt</button>
         </div>
         <div id="projectsList" class="projects-list"></div>
+        <div class="project-footer-actions">
+          <button id="newProjectButton" class="primary-button" type="button">Neues Projekt</button>
+        </div>
       </section>
 
       <section class="panel panel-manual">
@@ -200,7 +202,6 @@
               <option value="durationDesc">Längste Dauer</option>
             </select>
           </label>
-          <button id="deleteAllEntriesButton" class="danger-button" type="button">Alle Blöcke löschen</button>
         </div>
 
         <div class="table-wrapper">
@@ -216,6 +217,9 @@
             </thead>
             <tbody id="entriesTableBody"></tbody>
           </table>
+        </div>
+        <div class="overview-footer-actions">
+          <button id="deleteAllEntriesButton" class="danger-button" type="button">Alle Blöcke löschen</button>
         </div>
       </section>
 

@@ -150,14 +150,19 @@ Die Exportdateien werden über die Teilen-Funktion des Geräts oder Browsers ang
 
 Beim Monats-Excel-Export für alle Projekte wird zusätzlich eine Sammelmappe mit einzelnen Projekt-Blättern erzeugt.
 
-### 9. App-Daten übertragen
+### 9. Einstellungen
 
-Im Bereich `Daten & Export` gibt es zusätzlich:
+Im Bereich `Daten & Export` gibt es zusätzlich diese Einstellungen:
 
 - eine Rundungseinstellung für das Ausbuchen auf 5, 10 oder 15 Minuten
 - eine zuschaltbare Stundenerinnerung für laufende Projekte über die Notification-API des Browsers
 - tägliche und wöchentliche Sollzeiten
 - einen Backup-Status mit Hinweis auf das letzte exportierte App-Daten-Backup
+
+### 10. App-Daten übertragen
+
+Ebenfalls im Bereich `Daten & Export` gibt es:
+
 - `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
 - `App-Daten importieren`: führt Daten zusammen und überspringt erkannte Dubletten
 
