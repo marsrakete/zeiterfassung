@@ -935,7 +935,17 @@ th {
   }
   .panel, .full-width { grid-column: 1 / -1; }
   .panel { padding: 18px; }
+  .panel-projects {
+    display: flex;
+    flex-direction: column;
+  }
+  .project-footer-actions {
+    order: 1;
+    margin-top: 0;
+    margin-bottom: 18px;
+  }
   .projects-list {
+    order: 2;
     grid-template-columns: 1fr;
   }
   .overview-actions {
