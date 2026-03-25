@@ -72,6 +72,7 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 - Laufende Zeitblöcke können direkt bearbeitet oder gestoppt werden
 - Ein gestopptes Projekt kann danach über `Letztes Projekt fortsetzen` direkt wieder gestartet werden
 - Optional kann eine Systembenachrichtigung aktiviert werden: nach 1 Stunde Laufzeit und danach alle 30 Minuten erscheint `Es läuft noch ein Projekt-Timer`
+- Die Erinnerung läuft über den Service Worker; ein Klick auf die Benachrichtigung fokussiert oder öffnet die App
 
 ### 3. Zeitblöcke manuell nachtragen
 

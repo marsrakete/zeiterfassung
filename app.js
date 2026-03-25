@@ -35,7 +35,6 @@ let touchDragProjectId = null;
 let touchDragTargetId = null;
 let serviceWorkerRegistration = null;
 let versionInfo = { ...DEFAULT_VERSION_INFO };
-let activeTimerReminderNotification = null;
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
@@ -577,7 +576,7 @@ function updateActiveTimer() {
   const activeProject = getActiveProject();
 
   if (!state.activeSession || !activeProject) {
-    closeTimerReminderNotification();
+    void closeTimerReminderNotification();
     elements.activeProjectName.textContent = "Kein Projekt eingebucht";
     elements.activeTimer.textContent = "00:00:00";
     return;
@@ -626,12 +625,7 @@ function maybeSendTimerReminder(activeProject, durationMs) {
     ? `${reminderHours} h ${String(remainderMinutes).padStart(2, "0")} min`
     : `${reminderHours} h`;
 
-  closeTimerReminderNotification();
-  activeTimerReminderNotification = new Notification("Es läuft noch ein Projekt-Timer", {
-    body: `${activeProject.name} läuft seit ${durationLabel}.`,
-    tag: "active-project-timer",
-    icon: "./icons/app-icon.svg"
-  });
+  void showTimerReminderNotification(activeProject.name, durationLabel);
 }
 
 function getReminderMilestoneForDuration(durationMs) {
@@ -643,10 +637,49 @@ function getReminderMilestoneForDuration(durationMs) {
   return 60 + Math.floor((totalMinutes - 60) / 30) * 30;
 }
 
-function closeTimerReminderNotification() {
-  if (activeTimerReminderNotification) {
-    activeTimerReminderNotification.close();
-    activeTimerReminderNotification = null;
+async function showTimerReminderNotification(projectName, durationLabel) {
+  const registration = await getNotificationRegistration();
+  if (!registration) {
+    return;
+  }
+
+  await closeTimerReminderNotification();
+  await registration.showNotification("Es läuft noch ein Projekt-Timer", {
+    body: `${projectName} läuft seit ${durationLabel}.`,
+    tag: "active-project-timer",
+    renotify: false,
+    icon: "./icons/app-icon.svg",
+    badge: "./icons/app-icon.svg",
+    data: {
+      url: "./"
+    }
+  });
+}
+
+async function closeTimerReminderNotification() {
+  const registration = await getNotificationRegistration();
+  if (!registration) {
+    return;
+  }
+
+  const notifications = await registration.getNotifications({ tag: "active-project-timer" });
+  notifications.forEach((notification) => notification.close());
+}
+
+async function getNotificationRegistration() {
+  if (serviceWorkerRegistration) {
+    return serviceWorkerRegistration;
+  }
+
+  if (!("serviceWorker" in navigator)) {
+    return null;
+  }
+
+  try {
+    serviceWorkerRegistration = await navigator.serviceWorker.ready;
+    return serviceWorkerRegistration;
+  } catch {
+    return null;
   }
 }
 
@@ -1266,7 +1299,7 @@ function clockIn(projectId) {
   const actualNow = new Date();
   const roundedNow = roundDateUp(actualNow, getRoundingMinutes());
   const nowIso = actualNow.toISOString();
-  closeTimerReminderNotification();
+  void closeTimerReminderNotification();
 
   if (state.activeSession?.projectId === projectId) {
     return;
@@ -1325,7 +1358,7 @@ function handleActiveSessionSubmit(event) {
   state.activeSession.projectId = projectId;
   state.activeSession.start = start.toISOString();
   state.activeSession.lastReminderMinute = getReminderMilestoneForDuration(Math.max(Date.now() - start.getTime(), 0));
-  closeTimerReminderNotification();
+  void closeTimerReminderNotification();
   saveState();
   elements.activeSessionDialog.close();
   render();
@@ -1367,7 +1400,7 @@ function finalizeActiveSession(endIso, shouldRound = false) {
     return { endIso, rounded: false };
   }
 
-  closeTimerReminderNotification();
+  void closeTimerReminderNotification();
 
   const start = new Date(state.activeSession.start);
   const actualEnd = new Date(endIso);
