@@ -67,6 +67,8 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 - `Einbuchen` startet die Zeitmessung
 - Beim Wechsel auf ein anderes Projekt wird das bisher aktive Projekt automatisch beendet
 - `Ausbuchen` stoppt das aktuell laufende Projekt explizit
+- Start- und Endzeit der Live-Buchung werden beim Ein- und Ausbuchen auf das eingestellte Zeitraster aufgerundet
+- Wenn ein Start wegen Rundung erst in Kürze beginnt, zeigt die App den Zustand als geplanten Start mit Countdown an
 - Laufende Zeitblöcke können direkt bearbeitet oder gestoppt werden
 - Ein gestopptes Projekt kann danach über `Letztes Projekt fortsetzen` direkt wieder gestartet werden
 - Optional kann eine Systembenachrichtigung aktiviert werden: nach 1 Stunde Laufzeit und danach alle 30 Minuten erscheint `Es läuft noch ein Projekt-Timer`
@@ -154,7 +156,7 @@ Beim Monats-Excel-Export für alle Projekte wird zusätzlich eine Sammelmappe mi
 
 Im Bereich `Daten & Export` gibt es zusätzlich diese Einstellungen:
 
-- eine Rundungseinstellung für das Ausbuchen auf 5, 10 oder 15 Minuten
+- eine Rundungseinstellung mit `Keine Rundung`, 5, 10 oder 15 Minuten
 - eine zuschaltbare Stundenerinnerung für laufende Projekte über die Notification-API des Browsers
 - tägliche und wöchentliche Sollzeiten
 - einen Backup-Status mit Hinweis auf das letzte exportierte App-Daten-Backup

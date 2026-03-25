@@ -584,8 +584,16 @@ function updateActiveTimer() {
   }
 
   const startedAt = new Date(state.activeSession.start);
-  const durationMs = Math.max(Date.now() - startedAt.getTime(), 0);
+  const now = Date.now();
+  const durationMs = Math.max(now - startedAt.getTime(), 0);
+  const leadMs = Math.max(startedAt.getTime() - now, 0);
   elements.activeProjectName.textContent = activeProject.name;
+
+  if (leadMs > 0) {
+    elements.activeTimer.textContent = `Startet in ${formatDuration(leadMs, true)}`;
+    return;
+  }
+
   elements.activeTimer.textContent = formatDuration(durationMs, true);
   maybeSendTimerReminder(activeProject, durationMs);
 }
@@ -642,6 +650,10 @@ function closeTimerReminderNotification() {
   }
 }
 
+function getPendingStartMs(startIso) {
+  return Math.max(new Date(startIso).getTime() - Date.now(), 0);
+}
+
 function render() {
   elements.roundingSelect.value = String(getRoundingMinutes());
   elements.timerReminderCheckbox.checked = getTimerReminderEnabled();
@@ -689,6 +701,7 @@ function renderProjects() {
   for (const project of filteredProjects) {
     const active = state.activeSession?.projectId === project.id;
     const color = getProjectColor(project.id);
+    const pendingStart = active ? getPendingStartMs(state.activeSession.start) : 0;
     const projectEntries = state.entries.filter((entry) => entry.projectId === project.id && isEntryOnDate(entry, new Date()));
     const projectTotalMs = projectEntries.reduce((sum, entry) => sum + getDurationMs(entry), 0);
     const notePreview = project.note
@@ -708,7 +721,7 @@ function renderProjects() {
             <div class="project-name">${escapeHtml(project.name)}</div>
           </div>
           <div class="project-meta">
-            <span class="pill">${active ? `Läuft seit ${formatDateTime(state.activeSession.start)}` : `${projectEntries.length} Zeitblock${projectEntries.length === 1 ? "" : "e"} heute`}</span>
+            <span class="pill">${active ? (pendingStart > 0 ? `Geplant ab ${formatDateTime(state.activeSession.start)}` : `Läuft seit ${formatDateTime(state.activeSession.start)}`) : `${projectEntries.length} Zeitblock${projectEntries.length === 1 ? "" : "e"} heute`}</span>
             <span class="pill">Heute ${formatDuration(projectTotalMs)}</span>
           </div>
           ${notePreview}
@@ -1250,7 +1263,9 @@ function handleEntryActionClick(event) {
 }
 
 function clockIn(projectId) {
-  const nowIso = new Date().toISOString();
+  const actualNow = new Date();
+  const roundedNow = roundDateUp(actualNow, getRoundingMinutes());
+  const nowIso = actualNow.toISOString();
   closeTimerReminderNotification();
 
   if (state.activeSession?.projectId === projectId) {
@@ -1262,11 +1277,12 @@ function clockIn(projectId) {
     maybeShowRoundingNotice(finalized);
   }
 
-  state.activeSession = { projectId, start: nowIso, lastReminderMinute: 0 };
+  state.activeSession = { projectId, start: roundedNow.toISOString(), lastReminderMinute: 0 };
   if (state.lastStoppedSession?.projectId === projectId) {
     state.lastStoppedSession = null;
   }
   saveState();
+  maybeShowClockInRoundingNotice(actualNow, roundedNow);
   render();
 }
 
@@ -1324,8 +1340,9 @@ function pauseActiveSession() {
     projectId: state.activeSession.projectId,
     stoppedAt: new Date().toISOString()
   };
-  finalizeActiveSession(new Date().toISOString(), false);
+  const finalized = finalizeActiveSession(new Date().toISOString(), true);
   saveState();
+  maybeShowRoundingNotice(finalized);
   render();
 }
 
@@ -1337,7 +1354,7 @@ function resumeLastStoppedProject() {
 
   state.activeSession = {
     projectId: lastProjectId,
-    start: new Date().toISOString(),
+    start: roundDateUp(new Date(), getRoundingMinutes()).toISOString(),
     lastReminderMinute: 0
   };
   state.lastStoppedSession = null;
@@ -1374,6 +1391,7 @@ function finalizeActiveSession(endIso, shouldRound = false) {
   return {
     endIso: end.toISOString(),
     rounded: end.getTime() !== actualEnd.getTime(),
+    roundedEnd: end.getTime() !== actualEnd.getTime(),
     actualEndIso: actualEnd.toISOString()
   };
 }
@@ -1492,7 +1510,7 @@ function openProjectEditor(projectId) {
 }
 
 function handleRoundingChange() {
-  state.settings.roundingMinutes = Number(elements.roundingSelect.value) || 5;
+  state.settings.roundingMinutes = parseRoundingMinutes(elements.roundingSelect.value, 5);
   saveState();
   applyManualTimeSuggestions();
 }
@@ -1699,7 +1717,7 @@ function normalizeState(rawState) {
       : null,
     lastStoppedSession: rawState.lastStoppedSession || null,
     settings: {
-      roundingMinutes: rawState.settings?.roundingMinutes || fallback.settings.roundingMinutes,
+      roundingMinutes: parseRoundingMinutes(rawState.settings?.roundingMinutes, fallback.settings.roundingMinutes),
       timerReminderEnabled: rawState.settings?.timerReminderEnabled ?? fallback.settings.timerReminderEnabled,
       lastDataExportAt: rawState.settings?.lastDataExportAt || null,
       dailyGoalHours: rawState.settings?.dailyGoalHours ?? fallback.settings.dailyGoalHours,
@@ -1723,7 +1741,15 @@ function normalizeProjectName(name) {
 }
 
 function getRoundingMinutes() {
-  return Number(state.settings?.roundingMinutes) || 5;
+  return parseRoundingMinutes(state.settings?.roundingMinutes, 5);
+}
+
+function parseRoundingMinutes(value, fallback = 5) {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed >= 0) {
+    return parsed;
+  }
+  return fallback;
 }
 
 function getTimerReminderEnabled() {
@@ -1827,12 +1853,24 @@ function getWeeklyGoalHours() {
 }
 
 function maybeShowRoundingNotice(finalized) {
-  if (!finalized?.rounded) {
+  if (!finalized?.roundedEnd || !getRoundingMinutes()) {
     return;
   }
 
   const roundedTo = formatDateTime(finalized.endIso);
-  elements.roundingNotice.textContent = `Auf ${getRoundingMinutes()} Minuten gerundet, Ende: ${roundedTo}`;
+  showRoundingNotice(`Auf ${getRoundingMinutes()} Minuten gerundet, Ende: ${roundedTo}`);
+}
+
+function maybeShowClockInRoundingNotice(actualStart, roundedStart) {
+  if (roundedStart.getTime() === actualStart.getTime() || !getRoundingMinutes()) {
+    return;
+  }
+
+  showRoundingNotice(`Auf ${getRoundingMinutes()} Minuten gerundet, Start: ${formatDateTime(roundedStart)}`);
+}
+
+function showRoundingNotice(message) {
+  elements.roundingNotice.textContent = message;
   elements.roundingNotice.hidden = false;
   clearTimeout(roundingNoticeTimeoutId);
   roundingNoticeTimeoutId = setTimeout(() => {
@@ -2333,6 +2371,9 @@ function polarToCartesian(cx, cy, radius, angle) {
 }
 
 function roundDateUp(date, minutes) {
+  if (!minutes) {
+    return new Date(date);
+  }
   const rounded = new Date(date);
   rounded.setSeconds(0, 0);
   const stepMs = minutes * 60 * 1000;
@@ -2341,6 +2382,9 @@ function roundDateUp(date, minutes) {
 }
 
 function roundDateDown(date, minutes) {
+  if (!minutes) {
+    return new Date(date);
+  }
   const rounded = new Date(date);
   rounded.setSeconds(0, 0);
   const stepMs = minutes * 60 * 1000;
@@ -2349,20 +2393,28 @@ function roundDateDown(date, minutes) {
 }
 
 function roundSessionEndUp(start, end, minutes) {
-  const startMs = start.getTime();
-  const endMs = end.getTime();
+  if (!minutes) {
+    return new Date(end);
+  }
   const stepMs = minutes * 60 * 1000;
-  const durationMs = Math.max(endMs - startMs, 0);
-  const roundedDurationMs = Math.ceil(durationMs / stepMs) * stepMs;
-  return new Date(startMs + roundedDurationMs);
+  const roundedEnd = roundDateUp(end, minutes);
+
+  if (roundedEnd > start) {
+    return roundedEnd;
+  }
+
+  return new Date(roundDateUp(start, minutes).getTime() + stepMs);
 }
 
 function applyManualTimeSuggestions() {
   const minutes = getRoundingMinutes();
   const now = new Date();
-  const roundedEnd = roundDateUp(now, minutes);
-  const roundedStart = new Date(roundedEnd.getTime() - minutes * 60 * 1000);
-  const stepSeconds = minutes * 60;
+  const roundedEnd = minutes ? roundDateUp(now, minutes) : new Date(now);
+  roundedEnd.setSeconds(0, 0);
+  const roundedStart = minutes
+    ? new Date(roundedEnd.getTime() - minutes * 60 * 1000)
+    : new Date(roundedEnd.getTime() - 60 * 60 * 1000);
+  const stepSeconds = minutes ? minutes * 60 : 60;
 
   elements.manualStart.step = String(stepSeconds);
   elements.manualEnd.step = String(stepSeconds);
@@ -2443,8 +2495,9 @@ function formatEntryGroupLabel(value) {
 function buildImportPreviewMessage(importedState) {
   const projectCount = importedState.projects.length;
   const entryCount = importedState.entries.length;
-  const rounding = importedState.settings?.roundingMinutes || 5;
-  return `Sollen die Daten zusammengeführt werden?\n\nImport enthält:\n${projectCount} Projekte\n${entryCount} Zeitblöcke\nRundung: ${rounding} Minuten\n\nBestehende Projekte und Zeitblöcke bleiben erhalten. Dubletten werden übersprungen.`;
+  const rounding = parseRoundingMinutes(importedState.settings?.roundingMinutes, 5);
+  const roundingLabel = rounding ? `${rounding} Minuten` : "Keine Rundung";
+  return `Sollen die Daten zusammengeführt werden?\n\nImport enthält:\n${projectCount} Projekte\n${entryCount} Zeitblöcke\nRundung: ${roundingLabel}\n\nBestehende Projekte und Zeitblöcke bleiben erhalten. Dubletten werden übersprungen.`;
 }
 
 function mergeImportedData(importedState) {
@@ -2486,7 +2539,7 @@ function mergeImportedData(importedState) {
 
   state.settings = {
     ...state.settings,
-    roundingMinutes: normalizedImport.settings?.roundingMinutes || state.settings.roundingMinutes,
+    roundingMinutes: parseRoundingMinutes(normalizedImport.settings?.roundingMinutes, state.settings.roundingMinutes),
     timerReminderEnabled: normalizedImport.settings?.timerReminderEnabled ?? state.settings.timerReminderEnabled,
     dailyGoalHours: normalizedImport.settings?.dailyGoalHours ?? state.settings.dailyGoalHours,
     weeklyGoalHours: normalizedImport.settings?.weeklyGoalHours ?? state.settings.weeklyGoalHours,
