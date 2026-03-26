@@ -46,6 +46,35 @@ Optional mit anderem Port:
 powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
 ```
 
+## Installation als App
+
+### iPhone und iPad (iOS / iPadOS)
+
+1. Die App in `Safari` öffnen.
+2. Auf das `Teilen`-Symbol tippen.
+3. `Zum Home-Bildschirm` auswählen.
+4. Namen prüfen und mit `Hinzufügen` bestätigen.
+
+Danach erscheint die Zeiterfassung wie eine normale App auf dem Home-Bildschirm.
+
+### Android
+
+1. Die App in `Chrome`, `Edge` oder einem anderen unterstützten Browser öffnen.
+2. Im Browser-Menü `App installieren` oder `Zum Startbildschirm hinzufügen` auswählen.
+3. Installation bestätigen.
+
+Danach erscheint die Zeiterfassung im App-Launcher und kann wie eine normale App gestartet werden.
+
+### PC / Notebook
+
+1. Die App in einem unterstützten Browser wie `Edge` oder `Chrome` öffnen.
+2. Im Browser die Installationsfunktion der Website aufrufen.
+   In Edge meist über das App-Symbol in der Adressleiste oder über Menü > `Apps` > `Diese Website als App installieren`.
+   In Chrome meist über das Installieren-Symbol in der Adressleiste oder über Menü > `Übertragen, speichern und teilen` > `Seite installieren`.
+3. Installation bestätigen.
+
+Danach startet die Zeiterfassung in einem eigenen Fenster und kann an Taskleiste oder Startmenü angeheftet werden.
+
 ## So funktioniert die App
 
 ### 1. Projekte verwalten
