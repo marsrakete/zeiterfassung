@@ -1,4 +1,4 @@
-const CACHE_PREFIX = "zeiterfassung-cache";
+const CACHE_PREFIX = "zeiterfassung-cache-v46";
 const CACHE_NAME = CACHE_PREFIX;
 const ASSETS = [
   "./",

@@ -1,11 +1,676 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
 const LAST_SEEN_BUILD_KEY = "zeiterfassung-last-seen-build";
+const LANGUAGE_STORAGE_KEY = "zeiterfassung-language";
 const DATA_SCHEMA_VERSION = 3;
 const DEFAULT_VERSION_INFO = Object.freeze({
   appVersion: "unbekannt",
   cacheVersion: "offline",
   label: "Lokaler Stand"
 });
+const SUPPORTED_LANGUAGES = ["de", "en", "fr"];
+const LANGUAGE_FALLBACK = "de";
+const TRANSLATIONS = {
+  de: {
+    appTitle: "Zeiterfassung",
+    appEyebrow: "Zeiterfassung",
+    settingsOpen: "Daten und Export öffnen",
+    settingsTitle: "Daten & Export",
+    settingsDialogTitle: "Einstellungen",
+    activeStatus: "Aktiv",
+    noActiveProject: "Kein Projekt eingebucht",
+    editLive: "Live bearbeiten",
+    stop: "Stop",
+    resumeLast: "Letztes Projekt fortsetzen",
+    projectsSection: "Projekte",
+    projectsHeading: "Projektverwaltung",
+    projectSearch: "Projekt suchen",
+    projectFilterAll: "Alle",
+    projectFilterActive: "Aktiv",
+    projectFilterToday: "Heute gebucht",
+    projectFilterEmpty: "Heute ohne Buchung",
+    newProject: "Neues Projekt",
+    timesSection: "Zeiten",
+    manualHeading: "Manueller Zeitblock",
+    project: "Projekt",
+    start: "Start",
+    end: "Ende",
+    note: "Notiz",
+    optional: "Optional",
+    saveBlock: "Zeitblock speichern",
+    statsSection: "Statistik",
+    statsHeading: "Projektverteilung",
+    period: "Zeitraum",
+    chart: "Diagramm",
+    barChart: "Balkendiagramm",
+    pieChart: "Tortendiagramm",
+    calendarSection: "Kalender",
+    calendarHeading: "Kalenderansicht",
+    dailyGoal: "Soll heute",
+    weeklyGoal: "Soll Woche",
+    showCalendar: "Kalender anzeigen",
+    view: "Ansicht",
+    date: "Datum",
+    overviewSection: "Übersicht",
+    overviewHeading: "Gespeicherte Zeitblöcke",
+    sort: "Sortierung",
+    newestFirst: "Neueste zuerst",
+    oldestFirst: "Älteste zuerst",
+    projectAZ: "Projekt A-Z",
+    longestDuration: "Längste Dauer",
+    deleteAllBlocks: "Alle Blöcke löschen",
+    overviewProject: "Projekt",
+    overviewPeriod: "Zeitraum",
+    overviewDuration: "Dauer",
+    overviewEditor: "Editor",
+    helpSummary: "Hilfe & Dokumentation",
+    deleteConfirmYes: "Ja",
+    deleteConfirmNo: "Nein",
+    deleteProjectTitle: "Projekt löschen?",
+    deleteProjectConfirm: "Ja, löschen",
+    deleteProjectMessage: "Soll \"{project}\" wirklich gelöscht werden? Alle {count} gespeicherten Zeitblöcke dieses Projekts werden ebenfalls entfernt.",
+    deleteEntryTitle: "Zeitblock löschen?",
+    deleteEntryConfirm: "Ja, löschen",
+    deleteEntryMessage: "Soll der Zeitblock von \"{project}\" wirklich gelöscht werden?",
+    deleteAllEntriesTitle: "Alle Zeitblöcke löschen?",
+    deleteAllEntriesConfirm: "Ja, alle löschen",
+    deleteAllEntriesMessage: "Sollen wirklich alle {count} gespeicherten Zeitblöcke gelöscht werden?",
+    entryEditorHeading: "Zeitblock bearbeiten",
+    activeSessionHeading: "Laufenden Zeitblock bearbeiten",
+    projectCreateTitle: "Neues Projekt",
+    projectEditorTitle: "Projekt bearbeiten",
+    projectNoteTitle: "Projektnotiz",
+    close: "Schließen",
+    cancel: "Abbrechen",
+    save: "Speichern",
+    deleteBlock: "Block löschen",
+    settingsGroup: "Einstellungen",
+    dataExportGroup: "Datenexport",
+    dataStorageTitle: "Datenspeicherung",
+    dataStorageText1: "Alle Projekte und Zeitblöcke werden lokal im Browser auf diesem Gerät gespeichert.",
+    dataStorageText2: "Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.",
+    noBackup: "Noch kein App-Daten-Backup erstellt.",
+    backupFreshPrefix: "Letztes App-Daten-Backup",
+    backupOldPrefix: "Backup älter als 7 Tage",
+    importDataTitle: "Daten importieren?",
+    importDataConfirm: "Ja, zusammenführen",
+    importDataPrompt: "Sollen die Daten zusammengeführt werden?",
+    importDataContains: "Import enthält:",
+    importDataProjects: "{count} Projekte",
+    importDataBlocks: "{count} Zeitblöcke",
+    importDataRounding: "Rundung",
+    importDataMergeNotice: "Bestehende Projekte und Zeitblöcke bleiben erhalten. Dubletten werden übersprungen.",
+    rounding: "Rundung beim Ausbuchen",
+    noRounding: "Keine Rundung",
+    rounding5: "5 Minuten",
+    rounding10: "10 Minuten",
+    rounding15: "15 Minuten",
+    roundingUnit: "Minuten",
+    timerReminder: "Stundenerinnerung aktivieren",
+    dailyGoalHours: "Sollzeit pro Tag (Stunden)",
+    weeklyGoalHours: "Sollzeit pro Woche (Stunden)",
+    checkUpdates: "Auf Update prüfen",
+    reload: "Neu laden",
+    exportFormat: "Format",
+    exportPeriod: "Zeitraum",
+    exportDay: "Tag",
+    exportWeek: "Woche",
+    exportCurrentMonth: "Aktueller Monat",
+    exportCustomMonth: "Anderer Monat",
+    exportProjectScope: "Projektumfang",
+    exportAll: "Alle",
+    exportSingle: "Ein Projekt",
+    exportSingleProject: "Einzelprojekt",
+    exportButton: "Exportieren",
+    exportExcel: "Excel",
+    exportCsv: "CSV",
+    exportHtmlReport: "HTML-Bericht",
+    appDataTitle: "App-Daten übertragen",
+    appDataGroup: "App-Daten",
+    exportAppData: "App-Daten exportieren",
+    importAppData: "App-Daten importieren",
+    deviceTransferTitle: "Gerätewechsel",
+    deviceTransferText: "Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.",
+    exportShareTitle: "Zeiterfassung exportieren",
+    exportReportTitle: "Zeiterfassungsbericht exportieren",
+    exportDataTitle: "Zeiterfassungsdaten exportieren",
+    roundingNoticeUpdated: "Applikation wurde aktualisiert",
+    roundingNoticeStart: "Auf {minutes} Minuten gerundet, Start: {date}",
+    roundingNoticeEnd: "Auf {minutes} Minuten gerundet, Ende: {date}",
+    noProjectFound: "Keine Projekte gefunden",
+    noProjectFoundText: "Die aktuelle Suche oder der Filter liefert keine Treffer.",
+    noEntries: "Noch keine Zeitblöcke gespeichert.",
+    noChartData: "Keine Daten für den gewählten Zeitraum",
+    updateNoChange: "Keine neue Version gefunden. Diese App ist aktuell.",
+    updateCheckFailed: "Update-Prüfung nicht möglich. Bitte Internetverbindung oder Server prüfen.",
+    updateVersionIncomplete: "Die Versionsdatei vom Server ist unvollständig.",
+    updateAvailablePrefix: "Neue Version verfügbar",
+    updateAvailableAction: "Bitte jetzt neu laden.",
+    timerReminderTitle: "Es läuft noch ein Projekt-Timer",
+    timerReminderBody: "{project} läuft seit {duration}.",
+    timerReminderPermissionDenied: "Benachrichtigungen sind im Browser blockiert. Bitte erlaube sie in den Browser-Einstellungen.",
+    timerReminderPermissionUnavailable: "Systembenachrichtigungen werden auf diesem Gerät oder in diesem Browser nicht unterstützt.",
+    timerReminderPermissionNeeded: "Ohne Benachrichtigungsfreigabe kann die Stundenerinnerung nicht aktiviert werden.",
+    version: "Version",
+    offlineVersion: "Offline-Stand",
+    checkingUpdates: "Prüfe auf Updates …",
+    filter: "Filter",
+    projectFilter: "Filter",
+    filterAll: "Alle",
+    filterActive: "Aktiv",
+    filterToday: "Heute gebucht",
+    filterEmpty: "Heute ohne Buchung",
+    today: "Heute",
+    thisWeek: "Diese Woche",
+    thisMonth: "Dieser Monat",
+    day: "Tag",
+    week: "Woche",
+    month: "Monat",
+    noNote: "Keine Notiz hinterlegt",
+    noProjectYet: "Bitte zuerst ein Projekt anlegen",
+    emptyProjectsTitle: "Noch keine Projekte vorhanden",
+    emptyProjectsText: "Lege zuerst ein Projekt an, damit du Zeiten buchen und exportieren kannst.",
+    projectNoteMissing: "Keine Notiz hinterlegt",
+    projectDragHandle: "Projekt verschieben",
+    projectMoveUp: "Projekt nach oben",
+    projectMoveDown: "Projekt nach unten",
+    projectClockIn: "Einbuchen",
+    projectClockOut: "Ausbuchen",
+    projectEdit: "Bearbeiten",
+    projectDelete: "Löschen",
+    projectToday: "Heute",
+    projectNamePlaceholder: "z. B. Kunde Website Relaunch",
+    projectNotePlaceholder: "Optional",
+    unknownProject: "Unbekanntes Projekt",
+    noTimeBlocksFound: "Keine Projekte gefunden",
+    noTimeBlocksFoundText: "Die aktuelle Suche oder der Filter liefert keine Treffer.",
+    noBlocksSaved: "Noch keine Zeitblöcke gespeichert.",
+    invalidProjectName: "Der Projektname ist bereits vergeben. Bitte wähle einen eindeutigen Namen.",
+    invalidStartEnd: "Der manuelle Zeitblock braucht ein gültiges Start- und Enddatum.",
+    invalidProjectStart: "Bitte gib einen gültigen Projektwert und eine gültige Startzeit an.",
+    importInvalid: "Die ausgewählte Datei enthält keine gültigen Zeiterfassungsdaten.",
+    importInvalidFile: "Die Datei konnte nicht importiert werden. Bitte verwende eine gültige JSON-Exportdatei.",
+    overlapWarning: "Achtung: Der manuelle Zeitblock überschneidet sich mit vorhandenen Buchungen.",
+    overlapConfirm: "Trotzdem speichern?",
+    noFinishedBlocks: "Im gewählten Zeitraum wurden keine abgeschlossenen Zeitblöcke gefunden.",
+    projectBlocksTodayOne: "1 Zeitblock heute",
+    projectBlocksTodayMany: "{count} Zeitblöcke heute",
+    startsIn: "Startet in",
+    plannedFrom: "Geplant ab",
+    runningSince: "Läuft seit",
+    holiday: "Feiertag",
+    weekend: "Wochenende",
+    language: "Sprache",
+    languageAuto: "Automatisch",
+    languageGerman: "Deutsch",
+    languageEnglish: "Englisch",
+    languageFrench: "Französisch",
+    calendarTimeBlock: "Zeitblock",
+    calendarNoBlocks: "Keine Zeitblöcke an diesem Tag",
+    helpLoading: "Dokumentation wird geladen …",
+    helpLoadFailed: "Die Hilfe konnte gerade nicht geladen werden.",
+    manualConflictPrefixActive: "Laufend",
+    manualConflictPrefixBlock: "Block",
+    manualConflictMore: "… und {count} weitere Überschneidungen.",
+    manualConflictQuestion: "Trotzdem speichern?",
+    noProjectSelected: "Bitte zuerst ein Projekt anlegen",
+    invalidProjectSelection: "Bitte ein gültiges Projekt auswählen.",
+    invalidEntryDates: "Start und Ende des Blocks müssen gültig sein und Ende muss nach Start liegen.",
+    reportTitle: "Zeiterfassungsbericht",
+    reportPeriod: "Zeitraum",
+    reportProjectSummary: "Summen pro Projekt",
+    reportStatistics: "Statistik",
+    reportDayTotal: "Tagessumme",
+    reportProject: "Projekt",
+    reportStart: "Start",
+    reportEnd: "Ende",
+    reportDuration: "Dauer",
+    reportNote: "Notiz",
+    reportHours: "Stunden",
+    reportTotal: "Gesamt",
+    reportShare: "Anteil",
+    reportType: "Typ"
+  },
+  en: {
+    appTitle: "Time Tracking",
+    appEyebrow: "Time Tracking",
+    settingsOpen: "Open data and export",
+    settingsTitle: "Data & Export",
+    settingsDialogTitle: "Settings",
+    activeStatus: "Active",
+    noActiveProject: "No project booked",
+    editLive: "Edit live",
+    stop: "Stop",
+    resumeLast: "Resume last project",
+    projectsSection: "Projects",
+    projectsHeading: "Project Management",
+    projectSearch: "Search project",
+    projectFilterAll: "All",
+    projectFilterActive: "Active",
+    projectFilterToday: "Booked today",
+    projectFilterEmpty: "No booking today",
+    newProject: "New project",
+    timesSection: "Time",
+    manualHeading: "Manual time block",
+    project: "Project",
+    start: "Start",
+    end: "End",
+    note: "Note",
+    optional: "Optional",
+    saveBlock: "Save time block",
+    statsSection: "Statistics",
+    statsHeading: "Project distribution",
+    period: "Period",
+    chart: "Chart",
+    barChart: "Bar chart",
+    pieChart: "Pie chart",
+    calendarSection: "Calendar",
+    calendarHeading: "Calendar view",
+    dailyGoal: "Target today",
+    weeklyGoal: "Target week",
+    showCalendar: "Show calendar",
+    view: "View",
+    date: "Date",
+    overviewSection: "Overview",
+    overviewHeading: "Saved time blocks",
+    sort: "Sort",
+    newestFirst: "Newest first",
+    oldestFirst: "Oldest first",
+    projectAZ: "Project A-Z",
+    longestDuration: "Longest duration",
+    deleteAllBlocks: "Delete all blocks",
+    overviewProject: "Project",
+    overviewPeriod: "Period",
+    overviewDuration: "Duration",
+    overviewEditor: "Editor",
+    helpSummary: "Help & Documentation",
+    deleteConfirmYes: "Yes",
+    deleteConfirmNo: "No",
+    deleteProjectTitle: "Delete project?",
+    deleteProjectConfirm: "Yes, delete",
+    deleteProjectMessage: "Should \"{project}\" really be deleted? All {count} saved time blocks for this project will also be removed.",
+    deleteEntryTitle: "Delete time block?",
+    deleteEntryConfirm: "Yes, delete",
+    deleteEntryMessage: "Should the time block from \"{project}\" really be deleted?",
+    deleteAllEntriesTitle: "Delete all time blocks?",
+    deleteAllEntriesConfirm: "Yes, delete all",
+    deleteAllEntriesMessage: "Should all {count} saved time blocks really be deleted?",
+    entryEditorHeading: "Edit time block",
+    activeSessionHeading: "Edit running time block",
+    projectCreateTitle: "New project",
+    projectEditorTitle: "Edit project",
+    projectNoteTitle: "Project note",
+    close: "Close",
+    cancel: "Cancel",
+    save: "Save",
+    deleteBlock: "Delete block",
+    settingsGroup: "Settings",
+    dataExportGroup: "Data export",
+    dataStorageTitle: "Data storage",
+    dataStorageText1: "All projects and time blocks are stored locally in the browser on this device.",
+    dataStorageText2: "Data remains available until you delete it, import new data, or clear the browser storage manually.",
+    noBackup: "No app-data backup has been created yet.",
+    backupFreshPrefix: "Last app-data backup",
+    backupOldPrefix: "Backup older than 7 days",
+    importDataTitle: "Import data?",
+    importDataConfirm: "Yes, merge",
+    importDataPrompt: "Should the data be merged?",
+    importDataContains: "Import contains:",
+    importDataProjects: "{count} projects",
+    importDataBlocks: "{count} time blocks",
+    importDataRounding: "Rounding",
+    importDataMergeNotice: "Existing projects and time blocks will be kept. Duplicate entries will be skipped.",
+    rounding: "Rounding on stop",
+    noRounding: "No rounding",
+    rounding5: "5 minutes",
+    rounding10: "10 minutes",
+    rounding15: "15 minutes",
+    roundingUnit: "minutes",
+    timerReminder: "Enable hourly reminder",
+    dailyGoalHours: "Daily target hours",
+    weeklyGoalHours: "Weekly target hours",
+    checkUpdates: "Check for updates",
+    reload: "Reload",
+    exportFormat: "Format",
+    exportPeriod: "Period",
+    exportDay: "Day",
+    exportWeek: "Week",
+    exportCurrentMonth: "Current month",
+    exportCustomMonth: "Other month",
+    exportProjectScope: "Project scope",
+    exportAll: "All",
+    exportSingle: "Single project",
+    exportSingleProject: "Single project",
+    exportButton: "Export",
+    exportExcel: "Excel",
+    exportCsv: "CSV",
+    exportHtmlReport: "HTML report",
+    appDataTitle: "Transfer app data",
+    appDataGroup: "App data",
+    exportAppData: "Export app data",
+    importAppData: "Import app data",
+    deviceTransferTitle: "Device switch",
+    deviceTransferText: "Export your app data as a JSON file and import it again on the other device.",
+    exportShareTitle: "Export time tracking",
+    exportReportTitle: "Export time tracking report",
+    exportDataTitle: "Export time tracking data",
+    roundingNoticeUpdated: "Application has been updated",
+    roundingNoticeStart: "Rounded to {minutes} minutes, start: {date}",
+    roundingNoticeEnd: "Rounded to {minutes} minutes, end: {date}",
+    noProjectFound: "No projects found",
+    noProjectFoundText: "The current search or filter returned no results.",
+    noEntries: "No time blocks saved yet.",
+    noChartData: "No data for the selected period",
+    updateNoChange: "No new version found. This app is up to date.",
+    updateCheckFailed: "Update check not possible. Please check your internet connection or server.",
+    updateVersionIncomplete: "The server version file is incomplete.",
+    updateAvailablePrefix: "New version available",
+    updateAvailableAction: "Please reload now.",
+    timerReminderTitle: "A project timer is still running",
+    timerReminderBody: "{project} has been running for {duration}.",
+    timerReminderPermissionDenied: "Notifications are blocked in the browser. Please allow them in browser settings.",
+    timerReminderPermissionUnavailable: "System notifications are not supported on this device or browser.",
+    timerReminderPermissionNeeded: "Without notification permission, the hourly reminder cannot be enabled.",
+    version: "Version",
+    offlineVersion: "Offline stand",
+    checkingUpdates: "Checking for updates …",
+    filter: "Filter",
+    projectFilter: "Filter",
+    filterAll: "All",
+    filterActive: "Active",
+    filterToday: "Booked today",
+    filterEmpty: "No booking today",
+    today: "Today",
+    thisWeek: "This week",
+    thisMonth: "This month",
+    day: "Day",
+    week: "Week",
+    month: "Month",
+    noNote: "No note set",
+    noProjectYet: "Please create a project first",
+    emptyProjectsTitle: "No projects yet",
+    emptyProjectsText: "Create a project first so you can book and export time.",
+    projectNoteMissing: "No note available",
+    projectDragHandle: "Move project",
+    projectMoveUp: "Move project up",
+    projectMoveDown: "Move project down",
+    projectClockIn: "Book in",
+    projectClockOut: "Book out",
+    projectEdit: "Edit",
+    projectDelete: "Delete",
+    projectToday: "Today",
+    projectNamePlaceholder: "e.g. Client website relaunch",
+    projectNotePlaceholder: "Optional",
+    unknownProject: "Unknown project",
+    noTimeBlocksFound: "No projects found",
+    noTimeBlocksFoundText: "The current search or filter returned no results.",
+    noBlocksSaved: "No time blocks saved yet.",
+    invalidProjectName: "The project name is already taken. Please choose a unique name.",
+    invalidStartEnd: "The manual time block needs valid start and end dates.",
+    invalidProjectStart: "Please choose a valid project and a valid start time.",
+    importInvalid: "The selected file does not contain valid time tracking data.",
+    importInvalidFile: "The file could not be imported. Please use a valid JSON export file.",
+    overlapWarning: "Warning: The manual time block overlaps with existing bookings.",
+    overlapConfirm: "Save anyway?",
+    noFinishedBlocks: "No completed time blocks were found in the selected period.",
+    projectBlocksTodayOne: "1 time block today",
+    projectBlocksTodayMany: "{count} time blocks today",
+    startsIn: "Starts in",
+    plannedFrom: "Planned from",
+    runningSince: "Running since",
+    holiday: "Holiday",
+    weekend: "Weekend",
+    language: "Language",
+    languageAuto: "Automatic",
+    languageGerman: "German",
+    languageEnglish: "English",
+    languageFrench: "French",
+    calendarTimeBlock: "Time block",
+    calendarNoBlocks: "No time blocks on this day",
+    helpLoading: "Loading documentation …",
+    helpLoadFailed: "Help could not be loaded right now.",
+    manualConflictPrefixActive: "Running",
+    manualConflictPrefixBlock: "Block",
+    manualConflictMore: "… and {count} more overlaps.",
+    manualConflictQuestion: "Save anyway?",
+    noProjectSelected: "Please create a project first",
+    invalidProjectSelection: "Please choose a valid project.",
+    invalidEntryDates: "The block start and end must be valid and end must be after start.",
+    reportTitle: "Time tracking report",
+    reportPeriod: "Period",
+    reportProjectSummary: "Totals per project",
+    reportStatistics: "Statistics",
+    reportDayTotal: "Day total",
+    reportProject: "Project",
+    reportStart: "Start",
+    reportEnd: "End",
+    reportDuration: "Duration",
+    reportNote: "Note",
+    reportHours: "Hours",
+    reportTotal: "Total",
+    reportShare: "Share",
+    reportType: "Type"
+  },
+  fr: {
+    appTitle: "Suivi du temps",
+    appEyebrow: "Suivi du temps",
+    settingsOpen: "Ouvrir données et export",
+    settingsTitle: "Données et export",
+    settingsDialogTitle: "Paramètres",
+    activeStatus: "Actif",
+    noActiveProject: "Aucun projet sélectionné",
+    editLive: "Modifier en direct",
+    stop: "Stop",
+    resumeLast: "Reprendre le dernier projet",
+    projectsSection: "Projets",
+    projectsHeading: "Gestion des projets",
+    projectSearch: "Rechercher un projet",
+    projectFilterAll: "Tous",
+    projectFilterActive: "Actifs",
+    projectFilterToday: "Enregistrés aujourd'hui",
+    projectFilterEmpty: "Aucune saisie aujourd'hui",
+    newProject: "Nouveau projet",
+    timesSection: "Temps",
+    manualHeading: "Bloc de temps manuel",
+    project: "Projet",
+    start: "Début",
+    end: "Fin",
+    note: "Note",
+    optional: "Facultatif",
+    saveBlock: "Enregistrer le bloc",
+    statsSection: "Statistiques",
+    statsHeading: "Répartition des projets",
+    period: "Période",
+    chart: "Graphique",
+    barChart: "Histogramme",
+    pieChart: "Diagramme circulaire",
+    calendarSection: "Calendrier",
+    calendarHeading: "Vue calendrier",
+    dailyGoal: "Objectif du jour",
+    weeklyGoal: "Objectif de la semaine",
+    showCalendar: "Afficher le calendrier",
+    view: "Vue",
+    date: "Date",
+    overviewSection: "Aperçu",
+    overviewHeading: "Blocs de temps enregistrés",
+    sort: "Tri",
+    newestFirst: "Les plus récents",
+    oldestFirst: "Les plus anciens",
+    projectAZ: "Projet A-Z",
+    longestDuration: "Durée la plus longue",
+    deleteAllBlocks: "Supprimer tous les blocs",
+    overviewProject: "Projet",
+    overviewPeriod: "Période",
+    overviewDuration: "Durée",
+    overviewEditor: "Éditeur",
+    helpSummary: "Aide et documentation",
+    deleteConfirmYes: "Oui",
+    deleteConfirmNo: "Non",
+    deleteProjectTitle: "Supprimer le projet ?",
+    deleteProjectConfirm: "Oui, supprimer",
+    deleteProjectMessage: "Voulez-vous vraiment supprimer \"{project}\" ? Tous les {count} blocs de temps enregistrés pour ce projet seront aussi supprimés.",
+    deleteEntryTitle: "Supprimer le bloc de temps ?",
+    deleteEntryConfirm: "Oui, supprimer",
+    deleteEntryMessage: "Voulez-vous vraiment supprimer le bloc de temps de \"{project}\" ?",
+    deleteAllEntriesTitle: "Supprimer tous les blocs de temps ?",
+    deleteAllEntriesConfirm: "Oui, tout supprimer",
+    deleteAllEntriesMessage: "Voulez-vous vraiment supprimer les {count} blocs de temps enregistrés ?",
+    entryEditorHeading: "Modifier le bloc",
+    activeSessionHeading: "Modifier le bloc en cours",
+    projectCreateTitle: "Nouveau projet",
+    projectEditorTitle: "Modifier le projet",
+    projectNoteTitle: "Note du projet",
+    close: "Fermer",
+    cancel: "Annuler",
+    save: "Enregistrer",
+    deleteBlock: "Supprimer le bloc",
+    settingsGroup: "Paramètres",
+    dataExportGroup: "Export des données",
+    dataStorageTitle: "Stockage des données",
+    dataStorageText1: "Tous les projets et blocs de temps sont stockés localement dans le navigateur sur cet appareil.",
+    dataStorageText2: "Les données restent disponibles jusqu'à suppression, importation ou effacement manuel du stockage du navigateur.",
+    noBackup: "Aucune sauvegarde des données de l'application n'a encore été créée.",
+    backupFreshPrefix: "Dernière sauvegarde des données",
+    backupOldPrefix: "Sauvegarde de plus de 7 jours",
+    importDataTitle: "Importer les données ?",
+    importDataConfirm: "Oui, fusionner",
+    importDataPrompt: "Voulez-vous fusionner les données ?",
+    importDataContains: "L'import contient :",
+    importDataProjects: "{count} projets",
+    importDataBlocks: "{count} blocs de temps",
+    importDataRounding: "Arrondi",
+    importDataMergeNotice: "Les projets et blocs de temps existants seront conservés. Les doublons seront ignorés.",
+    rounding: "Arrondi à l'arrêt",
+    noRounding: "Aucun arrondi",
+    rounding5: "5 minutes",
+    rounding10: "10 minutes",
+    rounding15: "15 minutes",
+    roundingUnit: "minutes",
+    timerReminder: "Activer le rappel horaire",
+    dailyGoalHours: "Heures cibles par jour",
+    weeklyGoalHours: "Heures cibles par semaine",
+    checkUpdates: "Vérifier les mises à jour",
+    reload: "Recharger",
+    exportFormat: "Format",
+    exportPeriod: "Période",
+    exportDay: "Jour",
+    exportWeek: "Semaine",
+    exportCurrentMonth: "Mois en cours",
+    exportCustomMonth: "Autre mois",
+    exportProjectScope: "Périmètre du projet",
+    exportAll: "Tous",
+    exportSingle: "Un projet",
+    exportSingleProject: "Projet unique",
+    exportButton: "Exporter",
+    exportExcel: "Excel",
+    exportCsv: "CSV",
+    exportHtmlReport: "Rapport HTML",
+    appDataTitle: "Transférer les données de l'application",
+    appDataGroup: "Données de l'application",
+    exportAppData: "Exporter les données",
+    importAppData: "Importer les données",
+    deviceTransferTitle: "Changement d'appareil",
+    deviceTransferText: "Exportez vos données d'application en tant que fichier JSON et importez-les à nouveau sur l'autre appareil.",
+    exportShareTitle: "Exporter le suivi du temps",
+    exportReportTitle: "Exporter le rapport de suivi du temps",
+    exportDataTitle: "Exporter les données de suivi du temps",
+    roundingNoticeUpdated: "L'application a été mise à jour",
+    roundingNoticeStart: "Arrondi à {minutes} minutes, début : {date}",
+    roundingNoticeEnd: "Arrondi à {minutes} minutes, fin : {date}",
+    noProjectFound: "Aucun projet trouvé",
+    noProjectFoundText: "La recherche ou le filtre actuel ne renvoie aucun résultat.",
+    noEntries: "Aucun bloc de temps enregistré pour le moment.",
+    noChartData: "Aucune donnée pour la période sélectionnée",
+    updateNoChange: "Aucune nouvelle version trouvée. L'application est à jour.",
+    updateCheckFailed: "Impossible de vérifier les mises à jour. Vérifiez votre connexion ou le serveur.",
+    updateVersionIncomplete: "Le fichier de version du serveur est incomplet.",
+    updateAvailablePrefix: "Nouvelle version disponible",
+    updateAvailableAction: "Veuillez recharger maintenant.",
+    timerReminderTitle: "Un minuteur de projet tourne encore",
+    timerReminderBody: "{project} fonctionne depuis {duration}.",
+    timerReminderPermissionDenied: "Les notifications sont bloquées dans le navigateur. Autorisez-les dans les paramètres du navigateur.",
+    timerReminderPermissionUnavailable: "Les notifications système ne sont pas prises en charge sur cet appareil ou navigateur.",
+    timerReminderPermissionNeeded: "Sans autorisation de notification, le rappel horaire ne peut pas être activé.",
+    version: "Version",
+    offlineVersion: "Version hors ligne",
+    checkingUpdates: "Recherche des mises à jour …",
+    filter: "Filtre",
+    projectFilter: "Filtre",
+    filterAll: "Tous",
+    filterActive: "Actifs",
+    filterToday: "Enregistrés aujourd'hui",
+    filterEmpty: "Aucune saisie aujourd'hui",
+    today: "Aujourd'hui",
+    thisWeek: "Cette semaine",
+    thisMonth: "Ce mois-ci",
+    day: "Jour",
+    week: "Semaine",
+    month: "Mois",
+    noNote: "Aucune note",
+    noProjectYet: "Veuillez d'abord créer un projet",
+    emptyProjectsTitle: "Aucun projet pour le moment",
+    emptyProjectsText: "Créez d'abord un projet pour pouvoir enregistrer et exporter du temps.",
+    projectNoteMissing: "Aucune note",
+    projectDragHandle: "Déplacer le projet",
+    projectMoveUp: "Déplacer le projet vers le haut",
+    projectMoveDown: "Déplacer le projet vers le bas",
+    projectClockIn: "Entrer",
+    projectClockOut: "Sortir",
+    projectEdit: "Modifier",
+    projectDelete: "Supprimer",
+    projectToday: "Aujourd'hui",
+    projectNamePlaceholder: "p. ex. refonte du site client",
+    projectNotePlaceholder: "Facultatif",
+    unknownProject: "Projet inconnu",
+    noTimeBlocksFound: "Aucun projet trouvé",
+    noTimeBlocksFoundText: "La recherche ou le filtre actuel ne renvoie aucun résultat.",
+    noBlocksSaved: "Aucun bloc de temps enregistré pour le moment.",
+    invalidProjectName: "Le nom du projet est déjà utilisé. Veuillez choisir un nom unique.",
+    invalidStartEnd: "Le bloc de temps manuel nécessite des dates de début et de fin valides.",
+    invalidProjectStart: "Veuillez choisir un projet valide et une heure de début valide.",
+    importInvalid: "Le fichier sélectionné ne contient pas de données de suivi valides.",
+    importInvalidFile: "Le fichier n'a pas pu être importé. Veuillez utiliser un fichier JSON valide.",
+    overlapWarning: "Attention : le bloc de temps manuel chevauche des saisies existantes.",
+    overlapConfirm: "Enregistrer quand même ?",
+    noFinishedBlocks: "Aucun bloc de temps terminé n'a été trouvé pour la période sélectionnée.",
+    projectBlocksTodayOne: "1 bloc aujourd'hui",
+    projectBlocksTodayMany: "{count} blocs aujourd'hui",
+    startsIn: "Démarre dans",
+    plannedFrom: "Prévu à partir de",
+    runningSince: "En cours depuis",
+    holiday: "Jour férié",
+    weekend: "Week-end",
+    language: "Langue",
+    languageAuto: "Automatique",
+    languageGerman: "Allemand",
+    languageEnglish: "Anglais",
+    languageFrench: "Français",
+    calendarTimeBlock: "Bloc de temps",
+    calendarNoBlocks: "Aucun bloc de temps ce jour-là",
+    helpLoading: "Chargement de la documentation …",
+    helpLoadFailed: "L'aide n'a pas pu être chargée pour le moment.",
+    manualConflictPrefixActive: "En cours",
+    manualConflictPrefixBlock: "Bloc",
+    manualConflictMore: "… et {count} autres chevauchements.",
+    manualConflictQuestion: "Enregistrer quand même ?",
+    noProjectSelected: "Veuillez d'abord créer un projet",
+    invalidProjectSelection: "Veuillez choisir un projet valide.",
+    invalidEntryDates: "Le début et la fin du bloc doivent être valides et la fin doit être après le début.",
+    reportTitle: "Rapport de suivi du temps",
+    reportPeriod: "Période",
+    reportProjectSummary: "Totaux par projet",
+    reportStatistics: "Statistiques",
+    reportDayTotal: "Total du jour",
+    reportProject: "Projet",
+    reportStart: "Début",
+    reportEnd: "Fin",
+    reportDuration: "Durée",
+    reportNote: "Note",
+    reportHours: "Heures",
+    reportTotal: "Total",
+    reportShare: "Part",
+    reportType: "Type"
+  }
+};
 const PROJECT_COLOR_PALETTE = [
   "#011a27",
   "#4cb5f5",
@@ -106,6 +771,7 @@ const elements = {
   activeSessionCancelButton: document.querySelector("#activeSessionCancelButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   closeSettingsButton: document.querySelector("#closeSettingsButton"),
+  languageSelect: document.querySelector("#languageSelect"),
   checkForUpdatesButton: document.querySelector("#checkForUpdatesButton"),
   updateCheckStatus: document.querySelector("#updateCheckStatus"),
   reloadAppButton: document.querySelector("#reloadAppButton"),
@@ -140,6 +806,7 @@ const elements = {
 
 initializeDefaults();
 renderVersionLabel();
+applyTranslations();
 bindEvents();
 render();
 startTicker();
@@ -171,6 +838,7 @@ function createInitialState() {
     settings: {
       roundingMinutes: 5,
       timerReminderEnabled: false,
+      language: "auto",
       lastDataExportAt: null,
       dailyGoalHours: 8,
       weeklyGoalHours: 40
@@ -223,6 +891,7 @@ function initializeDefaults() {
   elements.exportWeek.value = toWeekInputValue(now);
   elements.exportMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   elements.roundingSelect.value = String(getRoundingMinutes());
+  elements.languageSelect.value = getLanguageSetting();
   elements.timerReminderCheckbox.checked = getTimerReminderEnabled();
   elements.timerReminderCheckbox.disabled = !supportsNotificationApi();
   elements.dailyGoalInput.value = String(getDailyGoalHours());
@@ -233,11 +902,11 @@ function initializeDefaults() {
 
 function renderVersionLabel() {
   const info = getVersionInfo();
-  elements.versionLabel.textContent = `Version ${info.appVersion} · Offline-Stand ${info.cacheVersion}`;
+  elements.versionLabel.textContent = `${t("version")} ${info.appVersion} · ${t("offlineVersion")} ${info.cacheVersion}`;
 }
 
 async function checkForUpdates() {
-  setUpdateCheckStatus("Prüfe auf Updates …");
+  setUpdateCheckStatus(t("checkingUpdates"));
   elements.checkForUpdatesButton.disabled = true;
 
   try {
@@ -250,19 +919,19 @@ async function checkForUpdates() {
     const remoteBuild = getBuildSignature(remoteVersion);
 
     if (!remoteAppVersion || !remoteCacheVersion) {
-      setUpdateCheckStatus("Die Versionsdatei vom Server ist unvollständig.");
+      setUpdateCheckStatus(t("updateVersionIncomplete"));
       return;
     }
 
     if (localBuild === remoteBuild) {
-      setUpdateCheckStatus("Keine neue Version gefunden. Diese App ist aktuell.");
+      setUpdateCheckStatus(t("updateNoChange"));
       return;
     }
 
     const suffix = remoteLabel ? ` (${remoteLabel})` : "";
-    setUpdateCheckStatus(`Neue Version verfügbar: ${remoteAppVersion} · ${remoteCacheVersion}${suffix}. Bitte jetzt neu laden.`, true);
+    setUpdateCheckStatus(`${t("updateAvailablePrefix")}: ${remoteAppVersion} · ${remoteCacheVersion}${suffix}. ${t("updateAvailableAction")}`, true);
   } catch {
-    setUpdateCheckStatus("Update-Prüfung nicht möglich. Bitte Internetverbindung oder Server prüfen.");
+    setUpdateCheckStatus(t("updateCheckFailed"));
   } finally {
     elements.checkForUpdatesButton.disabled = false;
   }
@@ -287,7 +956,7 @@ function showUpdateNoticeIfNeeded(nextVersionInfo = getVersionInfo()) {
     return;
   }
 
-  elements.roundingNotice.textContent = "Applikation wurde aktualisiert";
+  elements.roundingNotice.textContent = t("roundingNoticeUpdated");
   elements.roundingNotice.hidden = false;
   clearTimeout(roundingNoticeTimeoutId);
   roundingNoticeTimeoutId = setTimeout(() => {
@@ -332,6 +1001,246 @@ async function loadVersionInfo({ showUpdateNotice = false } = {}) {
   }
 }
 
+function t(key, params = {}) {
+  const language = getEffectiveLanguage();
+  const dict = TRANSLATIONS[language] || TRANSLATIONS[LANGUAGE_FALLBACK];
+  const fallbackDict = TRANSLATIONS[LANGUAGE_FALLBACK];
+  const value = dict[key] ?? fallbackDict[key] ?? key;
+  return String(value).replace(/\{(\w+)\}/g, (_match, token) => params[token] ?? "");
+}
+
+function getLanguageSetting() {
+  return normalizeLanguageSetting(state.settings?.language || localStorage.getItem(LANGUAGE_STORAGE_KEY) || "auto");
+}
+
+function setLanguage(language) {
+  const normalized = normalizeLanguageSetting(language);
+  state.settings.language = normalized;
+  localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
+  saveState();
+  applyTranslations();
+  render();
+}
+
+function normalizeLanguageSetting(value) {
+  if (value === "auto") {
+    return "auto";
+  }
+
+  const normalized = String(value || "").slice(0, 2).toLowerCase();
+  return SUPPORTED_LANGUAGES.includes(normalized) ? normalized : LANGUAGE_FALLBACK;
+}
+
+function getEffectiveLanguage() {
+  const setting = getLanguageSetting();
+  return setting === "auto" ? detectPreferredLanguage() : setting;
+}
+
+function detectPreferredLanguage() {
+  const browserLanguages = Array.isArray(navigator.languages) ? navigator.languages : [];
+  const candidates = [navigator.language, ...browserLanguages];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") {
+      continue;
+    }
+
+    const normalized = candidate.slice(0, 2).toLowerCase();
+    if (SUPPORTED_LANGUAGES.includes(normalized)) {
+      return normalized;
+    }
+  }
+
+  return LANGUAGE_FALLBACK;
+}
+
+function syncLocalizedState() {
+  const locale = getLocaleForFormatting();
+  document.documentElement.lang = getEffectiveLanguage();
+  const localizedInputs = [
+    elements.calendarDateInput,
+    elements.exportDay,
+    elements.exportWeek,
+    elements.exportMonth,
+    elements.manualStart,
+    elements.manualEnd,
+    elements.entryEditorStart,
+    elements.entryEditorEnd,
+    elements.activeSessionStart
+  ];
+  for (const input of localizedInputs) {
+    if (input) {
+      input.lang = locale;
+    }
+  }
+  if (elements.languageSelect) {
+    elements.languageSelect.value = getLanguageSetting();
+  }
+}
+
+function applyTranslations() {
+  syncLocalizedState();
+  document.title = t("appTitle");
+  const setText = (selector, value) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.textContent = value;
+    }
+  };
+  const setAttr = (selector, attribute, value) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.setAttribute(attribute, value);
+    }
+  };
+
+  setText(".hero-headline .eyebrow", t("appEyebrow"));
+  setAttr("#settingsButton", "aria-label", t("settingsOpen"));
+  setAttr("#settingsButton", "title", t("settingsOpen"));
+  setText("#editActiveSessionButton", t("editLive"));
+  setText("#pauseActiveSessionButton", t("stop"));
+  setText("#resumeLastProjectButton", t("resumeLast"));
+  setText("#newProjectButton", t("newProject"));
+  setText("#deleteAllEntriesButton", t("deleteAllBlocks"));
+  setText("#checkForUpdatesButton", t("checkUpdates"));
+  setText("#reloadAppButton", t("reload"));
+  setText("#entryEditorDeleteButton", t("deleteBlock"));
+  setText("#entryEditorCancelButton", t("cancel"));
+  setText("#activeSessionCancelButton", t("cancel"));
+  setText("#projectCreateCancelButton", t("cancel"));
+  setText("#confirmNoButton", t("deleteConfirmNo"));
+  setText("#confirmYesButton", t("deleteConfirmYes"));
+  setText("#helpDetails summary", t("helpSummary"));
+  setText("#calendarDetails summary", t("showCalendar"));
+  setText("#settingsForm h3", t("settingsDialogTitle"));
+  setText("#projectCreateDialog h3", t("projectCreateTitle"));
+  setText("#projectEditorDialog h3", t("projectEditorTitle"));
+  setText("#entryEditorDialog h3", t("entryEditorHeading"));
+  setText("#activeSessionDialog h3", t("activeSessionHeading"));
+  setText("#projectNoteDialogTitle", t("projectNoteTitle"));
+  setText("#closeProjectNoteButton", t("close"));
+
+  const sectionTexts = [
+    [t("projectsSection"), t("projectsHeading")],
+    [t("timesSection"), t("manualHeading")],
+    [t("statsSection"), t("statsHeading")],
+    [t("calendarSection"), t("calendarHeading")],
+    [t("overviewSection"), t("overviewHeading")]
+  ];
+  document.querySelectorAll(".panel-header .section-kicker").forEach((element, index) => {
+    if (sectionTexts[index]) {
+      element.textContent = sectionTexts[index][0];
+    }
+  });
+  document.querySelectorAll(".panel-header h2").forEach((element, index) => {
+    if (sectionTexts[index]) {
+      element.textContent = sectionTexts[index][1];
+    }
+  });
+
+  const projectToolbarLabels = document.querySelectorAll(".project-toolbar label span");
+  if (projectToolbarLabels[0]) projectToolbarLabels[0].textContent = t("projectSearch");
+  if (projectToolbarLabels[1]) projectToolbarLabels[1].textContent = t("filter");
+  elements.projectSearchInput.placeholder = t("projectSearch");
+
+  const projectFilterOptions = elements.projectFilterSelect.querySelectorAll("option");
+  if (projectFilterOptions[0]) projectFilterOptions[0].textContent = t("filterAll");
+  if (projectFilterOptions[1]) projectFilterOptions[1].textContent = t("filterActive");
+  if (projectFilterOptions[2]) projectFilterOptions[2].textContent = t("filterToday");
+  if (projectFilterOptions[3]) projectFilterOptions[3].textContent = t("filterEmpty");
+
+  const chartLabels = document.querySelectorAll(".chart-toolbar label span");
+  if (chartLabels[0]) chartLabels[0].textContent = t("period");
+  if (chartLabels[1]) chartLabels[1].textContent = t("chart");
+  const chartTypeOptions = elements.chartTypeSelect.querySelectorAll("option");
+  if (chartTypeOptions[0]) chartTypeOptions[0].textContent = t("barChart");
+  if (chartTypeOptions[1]) chartTypeOptions[1].textContent = t("pieChart");
+  const chartRangeOptions = elements.chartRangeSelect.querySelectorAll("option");
+  if (chartRangeOptions[0]) chartRangeOptions[0].textContent = t("today");
+  if (chartRangeOptions[1]) chartRangeOptions[1].textContent = t("thisWeek");
+  if (chartRangeOptions[2]) chartRangeOptions[2].textContent = t("thisMonth");
+
+  const calendarLabels = document.querySelectorAll("#calendarDetails .chart-toolbar label span");
+  if (calendarLabels[0]) calendarLabels[0].textContent = t("view");
+  if (calendarLabels[1]) calendarLabels[1].textContent = t("date");
+  const calendarViewOptions = elements.calendarViewSelect.querySelectorAll("option");
+  if (calendarViewOptions[0]) calendarViewOptions[0].textContent = t("day");
+  if (calendarViewOptions[1]) calendarViewOptions[1].textContent = t("week");
+  if (calendarViewOptions[2]) calendarViewOptions[2].textContent = t("month");
+
+  const overviewLabels = document.querySelectorAll(".overview-actions label span");
+  if (overviewLabels[0]) overviewLabels[0].textContent = t("sort");
+  const sortOptions = elements.entrySortSelect.querySelectorAll("option");
+  if (sortOptions[0]) sortOptions[0].textContent = t("newestFirst");
+  if (sortOptions[1]) sortOptions[1].textContent = t("oldestFirst");
+  if (sortOptions[2]) sortOptions[2].textContent = t("projectAZ");
+  if (sortOptions[3]) sortOptions[3].textContent = t("longestDuration");
+
+  setText("#dataStorageTitle", t("dataStorageTitle"));
+  setText("#dataStorageText1", t("dataStorageText1"));
+  setText("#dataStorageText2", t("dataStorageText2"));
+  setText("#settingsGroupTitle", t("settingsGroup"));
+  setText("#dataExportTitle", t("dataExportGroup"));
+  setText("#appDataTitle", t("appDataGroup"));
+  setText("#deviceTransferTitle", t("deviceTransferTitle"));
+  setText("#deviceTransferText", t("deviceTransferText"));
+  const settingsLabels = document.querySelectorAll(".settings-actions label span");
+  if (settingsLabels[0]) settingsLabels[0].textContent = t("language");
+  if (settingsLabels[1]) settingsLabels[1].textContent = t("rounding");
+  if (settingsLabels[2]) settingsLabels[2].textContent = t("timerReminder");
+  if (settingsLabels[3]) settingsLabels[3].textContent = t("dailyGoalHours");
+  if (settingsLabels[4]) settingsLabels[4].textContent = t("weeklyGoalHours");
+
+  const languageOptions = elements.languageSelect.querySelectorAll("option");
+  if (languageOptions[0]) languageOptions[0].textContent = t("languageAuto");
+  if (languageOptions[1]) languageOptions[1].textContent = t("languageGerman");
+  if (languageOptions[2]) languageOptions[2].textContent = t("languageEnglish");
+  if (languageOptions[3]) languageOptions[3].textContent = t("languageFrench");
+
+  const exportFormLabels = document.querySelectorAll("#exportForm > label > span");
+  if (exportFormLabels[0]) exportFormLabels[0].textContent = t("exportFormat");
+  if (exportFormLabels[1]) exportFormLabels[1].textContent = t("exportPeriod");
+  setText("#exportDayLabel", t("exportDay"));
+  setText("#exportWeekLabel", t("exportWeek"));
+  setText("#exportMonthLabel", t("month"));
+  if (exportFormLabels[5]) exportFormLabels[5].textContent = t("exportProjectScope");
+  if (exportFormLabels[6]) exportFormLabels[6].textContent = t("exportSingleProject");
+  const exportFormatOptions = elements.exportFormatSelect.querySelectorAll("option");
+  if (exportFormatOptions[0]) exportFormatOptions[0].textContent = t("exportExcel");
+  if (exportFormatOptions[1]) exportFormatOptions[1].textContent = t("exportCsv");
+  if (exportFormatOptions[2]) exportFormatOptions[2].textContent = t("exportHtmlReport");
+  const exportRangeOptions = elements.exportRangeType.querySelectorAll("option");
+  if (exportRangeOptions[0]) exportRangeOptions[0].textContent = t("exportDay");
+  if (exportRangeOptions[1]) exportRangeOptions[1].textContent = t("exportWeek");
+  if (exportRangeOptions[2]) exportRangeOptions[2].textContent = t("exportCurrentMonth");
+  if (exportRangeOptions[3]) exportRangeOptions[3].textContent = t("exportCustomMonth");
+  const exportScopeOptions = elements.exportScopeSelect.querySelectorAll("option");
+  if (exportScopeOptions[0]) exportScopeOptions[0].textContent = t("exportAll");
+  if (exportScopeOptions[1]) exportScopeOptions[1].textContent = t("exportSingle");
+  setText("#exportForm button[type=\"submit\"]", t("exportButton"));
+
+  const roundingOptions = elements.roundingSelect.querySelectorAll("option");
+  if (roundingOptions[0]) roundingOptions[0].textContent = t("noRounding");
+  if (roundingOptions[1]) roundingOptions[1].textContent = t("rounding5");
+  if (roundingOptions[2]) roundingOptions[2].textContent = t("rounding10");
+  if (roundingOptions[3]) roundingOptions[3].textContent = t("rounding15");
+
+  elements.projectNameInput.placeholder = t("projectNamePlaceholder");
+  elements.projectNoteInput.placeholder = t("projectNotePlaceholder");
+  elements.projectEditorNote.placeholder = t("projectNotePlaceholder");
+  elements.manualNote.placeholder = t("projectNotePlaceholder");
+  setText("#manualEntryForm button[type=\"submit\"]", t("saveBlock"));
+  setText("#projectForm .primary-button", t("save"));
+  setText("#projectEditorForm .primary-button", t("save"));
+  setText("#activeSessionForm .primary-button", t("save"));
+  setText("#entryEditorForm .primary-button", t("save"));
+  setText(".table-wrapper th:nth-child(1)", t("overviewProject"));
+  setText(".table-wrapper th:nth-child(2)", t("overviewPeriod"));
+  setText(".table-wrapper th:nth-child(3)", t("overviewDuration"));
+  setText(".table-wrapper th:nth-child(4)", t("note"));
+  setText(".table-wrapper th:nth-child(5)", t("overviewEditor"));
+}
+
 function bindEvents() {
   elements.projectForm.addEventListener("submit", handleProjectSubmit);
   elements.newProjectButton.addEventListener("click", openProjectCreateDialog);
@@ -370,6 +1279,7 @@ function bindEvents() {
     await serviceWorkerRegistration?.update();
     window.location.reload();
   });
+  elements.languageSelect.addEventListener("change", handleLanguageChange);
   elements.roundingSelect.addEventListener("change", handleRoundingChange);
   elements.timerReminderCheckbox.addEventListener("change", handleTimerReminderToggle);
   elements.dailyGoalInput.addEventListener("change", handleGoalChange);
@@ -409,7 +1319,7 @@ function handleProjectSubmit(event) {
   }
 
   if (!isProjectNameUnique(name)) {
-    alert("Der Projektname ist bereits vergeben. Bitte wähle einen eindeutigen Namen.");
+    alert(t("invalidProjectName"));
     return;
   }
 
@@ -451,12 +1361,12 @@ function handleManualEntrySubmit(event) {
   const end = new Date(elements.manualEnd.value);
 
   if (!projectId) {
-    alert("Bitte zuerst ein Projekt anlegen.");
+    alert(t("noProjectSelected"));
     return;
   }
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-    alert("Der manuelle Zeitblock braucht ein gültiges Start- und Enddatum.");
+    alert(t("invalidStartEnd"));
     return;
   }
 
@@ -487,7 +1397,7 @@ function findConflictingEntries(start, end, ignoreEntryId = null) {
     .filter((entry) => rangesOverlap(start, end, new Date(entry.start), new Date(entry.end)))
     .map((entry) => ({
       type: "entry",
-      projectName: findProject(entry.projectId)?.name || "Unbekanntes Projekt",
+      projectName: findProject(entry.projectId)?.name || t("unknownProject"),
       start: entry.start,
       end: entry.end
     }));
@@ -498,7 +1408,7 @@ function findConflictingEntries(start, end, ignoreEntryId = null) {
     if (rangesOverlap(start, end, activeStart, activeEnd)) {
       conflicts.unshift({
         type: "active",
-        projectName: findProject(state.activeSession.projectId)?.name || "Unbekanntes Projekt",
+        projectName: findProject(state.activeSession.projectId)?.name || t("unknownProject"),
         start: state.activeSession.start,
         end: activeEnd.toISOString()
       });
@@ -516,12 +1426,12 @@ function buildConflictWarningMessage(conflicts) {
   const preview = conflicts
     .slice(0, 3)
     .map((conflict) => {
-      const prefix = conflict.type === "active" ? "Laufend" : "Block";
+      const prefix = conflict.type === "active" ? t("manualConflictPrefixActive") : t("manualConflictPrefixBlock");
       return `${prefix}: ${conflict.projectName} (${formatDateTime(conflict.start)} – ${formatDateTime(conflict.end)})`;
     })
     .join("\n");
-  const more = conflicts.length > 3 ? `\n… und ${conflicts.length - 3} weitere Überschneidungen.` : "";
-  return `Achtung: Der manuelle Zeitblock überschneidet sich mit vorhandenen Buchungen.\n\n${preview}${more}\n\nTrotzdem speichern?`;
+  const more = conflicts.length > 3 ? `\n${t("manualConflictMore", { count: conflicts.length - 3 })}` : "";
+  return `${t("overlapWarning")}\n\n${preview}${more}\n\n${t("manualConflictQuestion")}`;
 }
 
 async function handleExportSubmit(event) {
@@ -532,7 +1442,7 @@ async function handleExportSubmit(event) {
   const format = elements.exportFormatSelect.value;
 
   if (!rows.length) {
-    alert("Im gewählten Zeitraum wurden keine abgeschlossenen Zeitblöcke gefunden.");
+    alert(t("noFinishedBlocks"));
     return;
   }
 
@@ -540,7 +1450,7 @@ async function handleExportSubmit(event) {
     const csv = createCsv(rows);
     const fileName = `zeiterfassung-${range.fileStamp}.csv`;
     const file = new File([csv], fileName, { type: "text/csv;charset=utf-8" });
-    await shareOrDownloadFile(file, fileName, "Zeiterfassung exportieren");
+    await shareOrDownloadFile(file, fileName, t("exportShareTitle"));
     return;
   }
 
@@ -548,7 +1458,7 @@ async function handleExportSubmit(event) {
     const report = createMonthlyReportHtml(rows, range.label);
     const fileName = `zeiterfassung-bericht-${range.fileStamp}.html`;
     const file = new File([report], fileName, { type: "text/html;charset=utf-8" });
-    await shareOrDownloadFile(file, fileName, "Zeiterfassungsbericht exportieren");
+    await shareOrDownloadFile(file, fileName, t("exportReportTitle"));
     return;
   }
 
@@ -556,15 +1466,21 @@ async function handleExportSubmit(event) {
   const blob = new Blob([workbook], { type: "application/vnd.ms-excel" });
   const fileName = `zeiterfassung-${range.fileStamp}.xls`;
   const file = new File([blob], fileName, { type: blob.type });
-  await shareOrDownloadFile(file, fileName, "Zeiterfassung exportieren");
+  await shareOrDownloadFile(file, fileName, t("exportShareTitle"));
 }
 
 function updateExportFields() {
   const type = elements.exportRangeType.value;
-  elements.exportDayField.hidden = type !== "day";
-  elements.exportWeekField.hidden = type !== "week";
-  elements.exportMonthField.hidden = type !== "customMonth";
-  elements.exportProjectField.hidden = elements.exportScopeSelect.value !== "single";
+  elements.exportDay.disabled = type !== "day";
+  elements.exportWeek.disabled = type !== "week";
+  elements.exportMonth.disabled = type !== "customMonth";
+  const singleProjectSelected = elements.exportScopeSelect.value === "single";
+  elements.exportProjectField.hidden = !singleProjectSelected;
+  elements.exportProjectSelect.disabled = !singleProjectSelected;
+
+  elements.exportDayField.hidden = false;
+  elements.exportWeekField.hidden = false;
+  elements.exportMonthField.hidden = false;
 }
 
 function startTicker() {
@@ -577,7 +1493,7 @@ function updateActiveTimer() {
 
   if (!state.activeSession || !activeProject) {
     void closeTimerReminderNotification();
-    elements.activeProjectName.textContent = "Kein Projekt eingebucht";
+    elements.activeProjectName.textContent = t("noActiveProject");
     elements.activeTimer.textContent = "00:00:00";
     return;
   }
@@ -589,7 +1505,7 @@ function updateActiveTimer() {
   elements.activeProjectName.textContent = activeProject.name;
 
   if (leadMs > 0) {
-    elements.activeTimer.textContent = `Startet in ${formatDuration(leadMs, true)}`;
+    elements.activeTimer.textContent = `${t("startsIn")} ${formatDuration(leadMs, true)}`;
     return;
   }
 
@@ -644,8 +1560,8 @@ async function showTimerReminderNotification(projectName, durationLabel) {
   }
 
   await closeTimerReminderNotification();
-  await registration.showNotification("Es läuft noch ein Projekt-Timer", {
-    body: `${projectName} läuft seit ${durationLabel}.`,
+  await registration.showNotification(t("timerReminderTitle"), {
+    body: t("timerReminderBody", { project: projectName, duration: durationLabel }),
     tag: "active-project-timer",
     renotify: false,
     icon: "./icons/app-icon.svg",
@@ -717,14 +1633,17 @@ function renderProjects() {
   const filteredProjects = getFilteredProjects();
 
   if (!state.projects.length) {
-    elements.projectsList.appendChild(elements.emptyStateTemplate.content.cloneNode(true));
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = `<strong>${escapeHtml(t("emptyProjectsTitle"))}</strong><p>${escapeHtml(t("emptyProjectsText"))}</p>`;
+    elements.projectsList.appendChild(empty);
     return;
   }
 
   if (!filteredProjects.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.innerHTML = "<strong>Keine Projekte gefunden</strong><p>Die aktuelle Suche oder der Filter liefert keine Treffer.</p>";
+    empty.innerHTML = `<strong>${escapeHtml(t("noTimeBlocksFound"))}</strong><p>${escapeHtml(t("noTimeBlocksFoundText"))}</p>`;
     elements.projectsList.appendChild(empty);
     return;
   }
@@ -739,7 +1658,13 @@ function renderProjects() {
     const projectTotalMs = projectEntries.reduce((sum, entry) => sum + getDurationMs(entry), 0);
     const notePreview = project.note
       ? `<button class="project-note-preview" type="button" data-project-note="${project.id}">${escapeHtml(project.note)}</button>`
-      : `<span class="project-note-preview">Keine Notiz hinterlegt</span>`;
+      : `<span class="project-note-preview">${escapeHtml(t("projectNoteMissing"))}</span>`;
+    const todayLabel = projectEntries.length === 1 ? t("projectTodayBlocksOne") : t("projectTodayBlocksMany", { count: projectEntries.length });
+    const activityLabel = active
+      ? (pendingStart > 0
+        ? `${t("plannedFrom")} ${formatDateTime(state.activeSession.start)}`
+        : `${t("runningSince")} ${formatDateTime(state.activeSession.start)}`)
+      : todayLabel;
 
     const card = document.createElement("article");
     card.className = `project-card${active ? " active" : ""}`;
@@ -754,22 +1679,22 @@ function renderProjects() {
             <div class="project-name">${escapeHtml(project.name)}</div>
           </div>
           <div class="project-meta">
-            <span class="pill">${active ? (pendingStart > 0 ? `Geplant ab ${formatDateTime(state.activeSession.start)}` : `Läuft seit ${formatDateTime(state.activeSession.start)}`) : `${projectEntries.length} Zeitblock${projectEntries.length === 1 ? "" : "e"} heute`}</span>
-            <span class="pill">Heute ${formatDuration(projectTotalMs)}</span>
+            <span class="pill">${escapeHtml(activityLabel)}</span>
+            <span class="pill">${escapeHtml(`${t("projectToday")} ${formatDuration(projectTotalMs)}`)}</span>
           </div>
           ${notePreview}
         </div>
-        <div class="drag-handle" aria-hidden="true" title="Projekt verschieben">⋮⋮</div>
+        <div class="drag-handle" aria-hidden="true" title="${escapeHtml(t("projectDragHandle"))}">⋮⋮</div>
       </div>
       <div class="project-actions">
-        <button class="primary-button project-button" data-action="clock-in" data-project-id="${project.id}" ${active ? "disabled" : ""}>Einbuchen</button>
-        <button class="secondary-button project-button" data-action="clock-out" data-project-id="${project.id}" ${active ? "" : "disabled"}>Ausbuchen</button>
+        <button class="primary-button project-button" data-action="clock-in" data-project-id="${project.id}" ${active ? "disabled" : ""}>${escapeHtml(t("projectClockIn"))}</button>
+        <button class="secondary-button project-button" data-action="clock-out" data-project-id="${project.id}" ${active ? "" : "disabled"}>${escapeHtml(t("projectClockOut"))}</button>
       </div>
       <div class="project-secondary-actions">
-        <button class="secondary-button move-button" data-action="move-up" data-project-id="${project.id}" title="Projekt nach oben">↑</button>
-        <button class="secondary-button move-button" data-action="move-down" data-project-id="${project.id}" title="Projekt nach unten">↓</button>
-        <button class="secondary-button project-button" data-action="edit" data-project-id="${project.id}">Bearbeiten</button>
-        <button class="danger-button project-button" data-action="delete" data-project-id="${project.id}">Löschen</button>
+        <button class="secondary-button move-button" data-action="move-up" data-project-id="${project.id}" title="${escapeHtml(t("projectMoveUp"))}">↑</button>
+        <button class="secondary-button move-button" data-action="move-down" data-project-id="${project.id}" title="${escapeHtml(t("projectMoveDown"))}">↓</button>
+        <button class="secondary-button project-button" data-action="edit" data-project-id="${project.id}">${escapeHtml(t("projectEdit"))}</button>
+        <button class="danger-button project-button" data-action="delete" data-project-id="${project.id}">${escapeHtml(t("projectDelete"))}</button>
       </div>
     `;
     fragment.appendChild(card);
@@ -791,7 +1716,7 @@ function renderManualProjectOptions() {
   if (!state.projects.length) {
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "Bitte zuerst ein Projekt anlegen";
+    option.textContent = t("noProjectSelected");
     elements.manualProjectId.appendChild(option);
     return;
   }
@@ -811,7 +1736,7 @@ function renderEntries() {
 
   if (!sortedEntries.length) {
     const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="5" class="empty-cell">Noch keine Zeitblöcke gespeichert.</td>`;
+    row.innerHTML = `<td colspan="5" class="empty-cell">${escapeHtml(t("noBlocksSaved"))}</td>`;
     elements.entriesTableBody.appendChild(row);
     return;
   }
@@ -835,7 +1760,7 @@ function renderEntries() {
       <td>
         <span class="project-inline-label">
           <span class="project-color-dot" style="background:${color}"></span>
-          <span>${escapeHtml(project?.name || "Unbekanntes Projekt")}</span>
+          <span>${escapeHtml(project?.name || t("unknownProject"))}</span>
         </span>
       </td>
       <td>
@@ -844,7 +1769,7 @@ function renderEntries() {
       </td>
       <td>${formatDuration(getDurationMs(entry))}</td>
       <td>${escapeHtml(entry.note || "—")}</td>
-      <td><button class="secondary-button" type="button" data-entry-action="edit" data-entry-id="${entry.id}">Editor</button></td>
+      <td><button class="secondary-button" type="button" data-entry-action="edit" data-entry-id="${entry.id}">${escapeHtml(t("overviewEditor"))}</button></td>
     `;
     elements.entriesTableBody.appendChild(row);
   }
@@ -861,7 +1786,7 @@ function renderChart() {
   hideChartTooltip();
 
   if (!data.length) {
-    elements.statsChart.innerHTML = '<text x="320" y="160" text-anchor="middle" fill="#6b5c4d" font-size="18">Keine Daten für den gewählten Zeitraum</text>';
+    elements.statsChart.innerHTML = `<text x="320" y="160" text-anchor="middle" fill="#6b5c4d" font-size="18">${escapeHtml(t("noChartData"))}</text>`;
     return;
   }
 
@@ -883,9 +1808,9 @@ function renderCalendar() {
   const view = elements.calendarViewSelect.value;
   const entries = state.entries.filter((entry) => entry.end);
   elements.calendarLegend.innerHTML = `
-    <span><i class="calendar-dot" style="background:#0f766e"></i> Zeitblock</span>
-    <span><i class="calendar-dot" style="background:#d97706"></i> Feiertag</span>
-    <span><i class="calendar-dot" style="background:#2563eb"></i> Wochenende</span>
+    <span><i class="calendar-dot" style="background:#0f766e"></i> ${escapeHtml(t("calendarTimeBlock"))}</span>
+    <span><i class="calendar-dot" style="background:#d97706"></i> ${escapeHtml(t("holiday"))}</span>
+    <span><i class="calendar-dot" style="background:#2563eb"></i> ${escapeHtml(t("weekend"))}</span>
   `;
 
   if (view === "day") {
@@ -914,7 +1839,7 @@ function handleHelpToggle() {
 }
 
 async function loadHelpContent() {
-  elements.helpContent.innerHTML = '<p class="help-loading">Dokumentation wird geladen …</p>';
+  elements.helpContent.innerHTML = `<p class="help-loading">${t("helpLoading")}</p>`;
 
   try {
     const response = await fetch("./README.md", { cache: "no-cache" });
@@ -925,7 +1850,7 @@ async function loadHelpContent() {
     const markdown = await response.text();
     elements.helpContent.innerHTML = renderMarkdownAsHtml(markdown);
   } catch {
-    elements.helpContent.innerHTML = "<p class=\"help-loading\">Die Hilfe konnte gerade nicht geladen werden.</p>";
+    elements.helpContent.innerHTML = `<p class="help-loading">${t("helpLoadFailed")}</p>`;
   }
 }
 
@@ -1351,7 +2276,7 @@ function handleActiveSessionSubmit(event) {
   const start = new Date(elements.activeSessionStart.value);
 
   if (!findProject(projectId) || Number.isNaN(start.getTime()) || start > new Date()) {
-    alert("Bitte gib einen gültigen Projektwert und eine gültige Startzeit an.");
+    alert(t("invalidProjectStart"));
     return;
   }
 
@@ -1437,9 +2362,9 @@ function promptDeleteProject(projectId) {
 
   const entryCount = state.entries.filter((entry) => entry.projectId === projectId).length;
   openConfirmation({
-    title: "Projekt löschen?",
-    message: `Soll "${project.name}" wirklich gelöscht werden? Alle ${entryCount} gespeicherten Zeitblöcke dieses Projekts werden ebenfalls entfernt.`,
-    confirmLabel: "Ja, löschen",
+    title: t("deleteProjectTitle"),
+    message: t("deleteProjectMessage", { project: project.name, count: entryCount }),
+    confirmLabel: t("deleteProjectConfirm"),
     onConfirm: () => {
       if (state.activeSession?.projectId === projectId) {
         finalizeActiveSession(new Date().toISOString());
@@ -1514,7 +2439,7 @@ function handleProjectEditorSubmit(event) {
   }
 
   if (!isProjectNameUnique(name, editingProjectId)) {
-    alert("Der Projektname ist bereits vergeben. Bitte wähle einen eindeutigen Namen.");
+    alert(t("invalidProjectName"));
     return;
   }
 
@@ -1548,11 +2473,15 @@ function handleRoundingChange() {
   applyManualTimeSuggestions();
 }
 
+function handleLanguageChange() {
+  setLanguage(elements.languageSelect.value);
+}
+
 async function exportAppData() {
   const info = getVersionInfo();
   const payload = {
     exportedAt: new Date().toISOString(),
-    app: "Projekt-Zeiterfassung",
+    app: t("appTitle"),
     version: info.appVersion,
     schemaVersion: DATA_SCHEMA_VERSION,
     data: {
@@ -1571,7 +2500,7 @@ async function exportAppData() {
     { type: "application/json" }
   );
 
-  await shareOrDownloadFile(file, file.name, "Zeiterfassungsdaten exportieren");
+  await shareOrDownloadFile(file, file.name, t("exportDataTitle"));
   state.settings.lastDataExportAt = new Date().toISOString();
   saveState();
   renderBackupStatus();
@@ -1591,14 +2520,14 @@ async function handleImportData(event) {
     const importedState = parsed.data || parsed;
 
     if (!isValidImportedState(importedState)) {
-      alert("Die ausgewählte Datei enthält keine gültigen Zeiterfassungsdaten.");
+      alert(t("importInvalid"));
       return;
     }
 
     openConfirmation({
-      title: "Daten importieren?",
+      title: t("importDataTitle"),
       message: buildImportPreviewMessage(importedState),
-      confirmLabel: "Ja, zusammenführen",
+      confirmLabel: t("importDataConfirm"),
       onConfirm: () => {
         mergeImportedData(importedState);
         elements.settingsDialog.close();
@@ -1607,7 +2536,7 @@ async function handleImportData(event) {
       }
     });
   } catch {
-    alert("Die Datei konnte nicht importiert werden. Bitte verwende eine gültige JSON-Exportdatei.");
+    alert(t("importInvalidFile"));
   }
 }
 
@@ -1623,12 +2552,12 @@ function saveEntryFromRow(entryId) {
   const note = elements.entryEditorNote.value.trim();
 
   if (!findProject(projectId)) {
-    alert("Bitte ein gültiges Projekt auswählen.");
+    alert(t("invalidProjectSelection"));
     return;
   }
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-    alert("Start und Ende des Blocks müssen gültig sein und Ende muss nach Start liegen.");
+    alert(t("invalidEntryDates"));
     return;
   }
 
@@ -1650,9 +2579,9 @@ function promptDeleteEntry(entryId) {
 
   const project = findProject(entry.projectId);
   openConfirmation({
-    title: "Zeitblock löschen?",
-    message: `Soll der Zeitblock von "${project?.name || "Unbekanntes Projekt"}" wirklich gelöscht werden?`,
-    confirmLabel: "Ja, löschen",
+    title: t("deleteEntryTitle"),
+    message: t("deleteEntryMessage", { project: project?.name || t("unknownProject") }),
+    confirmLabel: t("deleteEntryConfirm"),
     onConfirm: () => {
       state.entries = state.entries.filter((currentEntry) => currentEntry.id !== entryId);
       if (editingEntryId === entryId) {
@@ -1667,9 +2596,9 @@ function promptDeleteEntry(entryId) {
 
 function promptDeleteAllEntries() {
   openConfirmation({
-    title: "Alle Zeitblöcke löschen?",
-    message: `Sollen wirklich alle ${state.entries.length} gespeicherten Zeitblöcke gelöscht werden?`,
-    confirmLabel: "Ja, alle löschen",
+    title: t("deleteAllEntriesTitle"),
+    message: t("deleteAllEntriesMessage", { count: state.entries.length }),
+    confirmLabel: t("deleteAllEntriesConfirm"),
     onConfirm: () => {
       state.entries = [];
       saveState();
@@ -1752,6 +2681,7 @@ function normalizeState(rawState) {
     settings: {
       roundingMinutes: parseRoundingMinutes(rawState.settings?.roundingMinutes, fallback.settings.roundingMinutes),
       timerReminderEnabled: rawState.settings?.timerReminderEnabled ?? fallback.settings.timerReminderEnabled,
+      language: normalizeLanguageSetting(rawState.settings?.language || fallback.settings.language),
       lastDataExportAt: rawState.settings?.lastDataExportAt || null,
       dailyGoalHours: rawState.settings?.dailyGoalHours ?? fallback.settings.dailyGoalHours,
       weeklyGoalHours: rawState.settings?.weeklyGoalHours ?? fallback.settings.weeklyGoalHours
@@ -1770,7 +2700,7 @@ function isProjectNameUnique(name, ignoreProjectId = null) {
 }
 
 function normalizeProjectName(name) {
-  return name.trim().toLocaleLowerCase("de-DE");
+  return name.trim().toLocaleLowerCase(getLocaleForFormatting());
 }
 
 function getRoundingMinutes() {
@@ -1797,13 +2727,13 @@ function renderBackupStatus() {
   const lastExport = state.settings?.lastDataExportAt;
 
   if (!lastExport) {
-    elements.backupStatusText.textContent = "Noch kein App-Daten-Backup erstellt.";
+    elements.backupStatusText.textContent = t("noBackup");
     return;
   }
 
   const exportDate = new Date(lastExport);
   const ageDays = Math.floor((Date.now() - exportDate.getTime()) / 86400000);
-  const prefix = ageDays > 7 ? "Backup älter als 7 Tage" : "Letztes App-Daten-Backup";
+  const prefix = ageDays > 7 ? t("backupOldPrefix") : t("backupFreshPrefix");
   elements.backupStatusText.textContent = `${prefix}: ${formatDateTime(lastExport)}`;
 }
 
@@ -1832,7 +2762,7 @@ async function handleTimerReminderToggle() {
   }
 
   if (!supportsNotificationApi()) {
-    alert("Systembenachrichtigungen werden auf diesem Gerät oder in diesem Browser nicht unterstützt.");
+    alert(t("timerReminderPermissionUnavailable"));
     elements.timerReminderCheckbox.checked = false;
     state.settings.timerReminderEnabled = false;
     saveState();
@@ -1846,7 +2776,7 @@ async function handleTimerReminderToggle() {
   }
 
   if (Notification.permission === "denied") {
-    alert("Benachrichtigungen sind im Browser blockiert. Bitte erlaube sie in den Browser-Einstellungen.");
+    alert(t("timerReminderPermissionDenied"));
     elements.timerReminderCheckbox.checked = false;
     state.settings.timerReminderEnabled = false;
     saveState();
@@ -1860,7 +2790,7 @@ async function handleTimerReminderToggle() {
   saveState();
 
   if (!enabled) {
-    alert("Ohne Benachrichtigungsfreigabe kann die Stundenerinnerung nicht aktiviert werden.");
+    alert(t("timerReminderPermissionNeeded"));
   }
 }
 
@@ -1891,7 +2821,7 @@ function maybeShowRoundingNotice(finalized) {
   }
 
   const roundedTo = formatDateTime(finalized.endIso);
-  showRoundingNotice(`Auf ${getRoundingMinutes()} Minuten gerundet, Ende: ${roundedTo}`);
+  showRoundingNotice(t("roundingNoticeEnd", { minutes: getRoundingMinutes(), date: roundedTo }));
 }
 
 function maybeShowClockInRoundingNotice(actualStart, roundedStart) {
@@ -1899,16 +2829,29 @@ function maybeShowClockInRoundingNotice(actualStart, roundedStart) {
     return;
   }
 
-  showRoundingNotice(`Auf ${getRoundingMinutes()} Minuten gerundet, Start: ${formatDateTime(roundedStart)}`);
+  showRoundingNotice(t("roundingNoticeStart", { minutes: getRoundingMinutes(), date: formatDateTime(roundedStart) }));
 }
 
 function showRoundingNotice(message) {
-  elements.roundingNotice.textContent = message;
+  const text = String(message || "").trim();
+  if (!text) {
+    hideRoundingNotice();
+    return;
+  }
+
+  elements.roundingNotice.textContent = text;
   elements.roundingNotice.hidden = false;
   clearTimeout(roundingNoticeTimeoutId);
   roundingNoticeTimeoutId = setTimeout(() => {
-    elements.roundingNotice.hidden = true;
+    hideRoundingNotice();
   }, 5000);
+}
+
+function hideRoundingNotice() {
+  clearTimeout(roundingNoticeTimeoutId);
+  roundingNoticeTimeoutId = null;
+  elements.roundingNotice.textContent = "";
+  elements.roundingNotice.hidden = true;
 }
 
 function getChartData() {
@@ -1941,7 +2884,7 @@ function getChartData() {
     const key = clipped.projectId;
     const current = totals.get(key) || {
       projectId: key,
-      name: project?.name || "Unbekanntes Projekt",
+      name: project?.name || t("unknownProject"),
       durationMs: 0
     };
     current.durationMs += durationMs;
@@ -2134,11 +3077,11 @@ function renderDayCalendar(selectedDate, entries) {
         const project = findProject(entry.projectId);
         const color = getProjectColor(entry.projectId);
         return `<div class="calendar-block" style="background:${color}">
-          <strong>${escapeHtml(project?.name || "Unbekanntes Projekt")}</strong><br>
+          <strong>${escapeHtml(project?.name || t("unknownProject"))}</strong><br>
           ${escapeHtml(formatDateTime(entry.start))} - ${escapeHtml(formatDateTime(entry.end))}<br>
           ${escapeHtml(formatDuration(getDurationMs(entry)))}${entry.note ? `<br>${escapeHtml(entry.note)}` : ""}
         </div>`;
-      }).join("") || '<div class="calendar-cell"><span class="calendar-cell-meta">Keine Zeitblöcke an diesem Tag</span></div>'}
+      }).join("") || `<div class="calendar-cell"><span class="calendar-cell-meta">${escapeHtml(t("calendarNoBlocks"))}</span></div>`}
     </div>
   `;
 }
@@ -2161,7 +3104,7 @@ function renderWeekCalendar(selectedDate, entries) {
         ${dayEntries.map((entry) => {
           const project = findProject(entry.projectId);
           return `<div class="calendar-block" style="background:${getProjectColor(entry.projectId)}">
-            <strong>${escapeHtml(project?.name || "Unbekanntes Projekt")}</strong><br>
+            <strong>${escapeHtml(project?.name || t("unknownProject"))}</strong><br>
             ${escapeHtml(formatDuration(getDurationMs(entry)))}
           </div>`;
         }).join("")}
@@ -2176,7 +3119,9 @@ function renderWeekCalendar(selectedDate, entries) {
 function renderMonthCalendar(selectedDate, entries) {
   const start = startOfWeek(startOfMonth(selectedDate));
   const currentMonth = selectedDate.getMonth();
-  const weekdayNames = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  const weekdayNames = Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(getLocaleForFormatting(), { weekday: "short" }).format(new Date(2024, 0, 1 + index))
+  );
   const headers = weekdayNames.map((name) => `<div class="calendar-month-header">${name}</div>`).join("");
 
   const cells = Array.from({ length: 42 }, (_, index) => {
@@ -2190,7 +3135,7 @@ function renderMonthCalendar(selectedDate, entries) {
       <span class="calendar-cell-meta">${formatDuration(total)}</span>
       ${dayEntries.slice(0, 3).map((entry) => {
         const project = findProject(entry.projectId);
-        return `<div class="calendar-chip" style="background:${getProjectColor(entry.projectId)}">${escapeHtml(project?.name || "Unbekanntes Projekt")}</div>`;
+        return `<div class="calendar-chip" style="background:${getProjectColor(entry.projectId)}">${escapeHtml(project?.name || t("unknownProject"))}</div>`;
       }).join("")}
     </div>`;
   }).join("");
@@ -2210,7 +3155,7 @@ function buildCalendarClasses(date) {
 }
 
 function formatShortDay(date) {
-  return new Intl.DateTimeFormat("de-DE", {
+  return new Intl.DateTimeFormat(getLocaleForFormatting(), {
     weekday: "short",
     day: "2-digit",
     month: "2-digit"
@@ -2457,7 +3402,7 @@ function applyManualTimeSuggestions() {
 }
 
 function getFilteredProjects() {
-  const search = elements.projectSearchInput.value.trim().toLocaleLowerCase("de-DE");
+  const search = elements.projectSearchInput.value.trim().toLocaleLowerCase(getLocaleForFormatting());
   const filter = elements.projectFilterSelect.value;
   const today = new Date();
 
@@ -2465,8 +3410,8 @@ function getFilteredProjects() {
     const active = state.activeSession?.projectId === project.id;
     const hasTodayEntries = state.entries.some((entry) => entry.projectId === project.id && isEntryOnDate(entry, today));
     const matchesSearch = !search
-      || project.name.toLocaleLowerCase("de-DE").includes(search)
-      || (project.note || "").toLocaleLowerCase("de-DE").includes(search);
+      || project.name.toLocaleLowerCase(getLocaleForFormatting()).includes(search)
+      || (project.note || "").toLocaleLowerCase(getLocaleForFormatting()).includes(search);
 
     if (!matchesSearch) {
       return false;
@@ -2517,7 +3462,7 @@ function sortEntriesForDisplay(entries) {
 }
 
 function formatEntryGroupLabel(value) {
-  return new Intl.DateTimeFormat("de-DE", {
+  return new Intl.DateTimeFormat(getLocaleForFormatting(), {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -2529,8 +3474,8 @@ function buildImportPreviewMessage(importedState) {
   const projectCount = importedState.projects.length;
   const entryCount = importedState.entries.length;
   const rounding = parseRoundingMinutes(importedState.settings?.roundingMinutes, 5);
-  const roundingLabel = rounding ? `${rounding} Minuten` : "Keine Rundung";
-  return `Sollen die Daten zusammengeführt werden?\n\nImport enthält:\n${projectCount} Projekte\n${entryCount} Zeitblöcke\nRundung: ${roundingLabel}\n\nBestehende Projekte und Zeitblöcke bleiben erhalten. Dubletten werden übersprungen.`;
+  const roundingLabel = rounding ? `${rounding} ${t("roundingUnit")}` : t("noRounding");
+  return `${t("importDataPrompt")}\n\n${t("importDataContains")}\n${t("importDataProjects", { count: projectCount })}\n${t("importDataBlocks", { count: entryCount })}\n${t("importDataRounding")}: ${roundingLabel}\n\n${t("importDataMergeNotice")}`;
 }
 
 function mergeImportedData(importedState) {
@@ -2587,7 +3532,16 @@ function createEntryFingerprint(entry) {
 }
 
 function createCsv(rows) {
-  const headers = ["Datum", "Projekt", "Start", "Ende", "Dauer (h)", "Dauer (hh:mm)", "Typ", "Notiz"];
+  const headers = [
+    t("date"),
+    t("reportProject"),
+    t("reportStart"),
+    t("reportEnd"),
+    t("reportHours"),
+    t("reportDuration"),
+    t("reportType"),
+    t("reportNote")
+  ];
   const lines = [
     headers,
     ...rows.map((row) => [row.date, row.project, row.start, row.end, row.durationHours, row.durationClock, row.type, row.note])
@@ -2622,9 +3576,9 @@ function createMonthlyReportHtml(rows, label) {
     return `
       <section>
         <h2>${escapeHtml(date)}</h2>
-        <p>Tagessumme: ${escapeHtml(formatDuration(totalHours * 3600000))}</p>
+        <p>${escapeHtml(t("reportDayTotal"))}: ${escapeHtml(formatDuration(totalHours * 3600000))}</p>
         <table>
-          <thead><tr><th>Projekt</th><th>Start</th><th>Ende</th><th>Dauer</th><th>Notiz</th></tr></thead>
+          <thead><tr><th>${escapeHtml(t("reportProject"))}</th><th>${escapeHtml(t("reportStart"))}</th><th>${escapeHtml(t("reportEnd"))}</th><th>${escapeHtml(t("reportDuration"))}</th><th>${escapeHtml(t("reportNote"))}</th></tr></thead>
           <tbody>${list}</tbody>
         </table>
       </section>
@@ -2640,10 +3594,10 @@ function createMonthlyReportHtml(rows, label) {
   `).join("");
 
   return `<!doctype html>
-<html lang="de">
+<html lang="${escapeAttribute(getEffectiveLanguage())}">
 <head>
   <meta charset="utf-8">
-  <title>Zeiterfassungsbericht</title>
+  <title>${escapeHtml(t("reportTitle"))}</title>
   <style>
     body { font-family: Segoe UI, sans-serif; margin: 32px; color: #2d2218; }
     h1, h2 { margin-bottom: 12px; }
@@ -2659,16 +3613,16 @@ function createMonthlyReportHtml(rows, label) {
   </style>
 </head>
 <body>
-  <h1>Zeiterfassungsbericht</h1>
-  <p>Zeitraum: ${escapeHtml(label)}</p>
-  <h2>Summen pro Projekt</h2>
+  <h1>${escapeHtml(t("reportTitle"))}</h1>
+  <p>${escapeHtml(t("reportPeriod"))}: ${escapeHtml(label)}</p>
+  <h2>${escapeHtml(t("reportProjectSummary"))}</h2>
   <table>
-    <thead><tr><th>Projekt</th><th>Dauer</th><th>Stunden</th></tr></thead>
+    <thead><tr><th>${escapeHtml(t("reportProject"))}</th><th>${escapeHtml(t("reportDuration"))}</th><th>${escapeHtml(t("reportHours"))}</th></tr></thead>
     <tbody>${projectSummary}</tbody>
   </table>
   ${daySections}
   <div class="chart-wrap">
-    <h2>Statistik</h2>
+    <h2>${escapeHtml(t("reportStatistics"))}</h2>
     ${chartSvg}
     <div class="legend">${createChartLegendMarkup(chartData)}</div>
   </div>
@@ -2689,9 +3643,10 @@ function getSelectedRange() {
   if (type === "day") {
     const date = new Date(elements.exportDay.value || now);
     return {
+      kind: "day",
       start: startOfDay(date),
       end: endOfDay(date),
-      label: `Tag ${toDateInputValue(date)}`,
+      label: `${t("day")} ${toDateInputValue(date)}`,
       fileStamp: toDateInputValue(date)
     };
   }
@@ -2700,9 +3655,10 @@ function getSelectedRange() {
     const [year, week] = (elements.exportWeek.value || toWeekInputValue(now)).split("-W").map(Number);
     const start = isoWeekToDate(year, week);
     return {
+      kind: "week",
       start,
       end: endOfWeek(start),
-      label: `Woche ${year}-W${String(week).padStart(2, "0")}`,
+      label: `${t("week")} ${year}-W${String(week).padStart(2, "0")}`,
       fileStamp: `${year}-W${String(week).padStart(2, "0")}`
     };
   }
@@ -2711,17 +3667,19 @@ function getSelectedRange() {
     const [year, month] = (elements.exportMonth.value || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`).split("-").map(Number);
     const customMonthDate = new Date(year, month - 1, 1);
     return {
+      kind: "month",
       start: startOfMonth(customMonthDate),
       end: endOfMonth(customMonthDate),
-      label: `Monat ${customMonthDate.getFullYear()}-${String(customMonthDate.getMonth() + 1).padStart(2, "0")}`,
+      label: `${t("month")} ${customMonthDate.getFullYear()}-${String(customMonthDate.getMonth() + 1).padStart(2, "0")}`,
       fileStamp: `${customMonthDate.getFullYear()}-${String(customMonthDate.getMonth() + 1).padStart(2, "0")}`
     };
   }
 
   return {
+    kind: "month",
     start: startOfMonth(now),
     end: endOfMonth(now),
-    label: `Monat ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+    label: `${t("month")} ${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
     fileStamp: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
   };
 }
@@ -2733,7 +3691,7 @@ function getExportProjectFilter() {
 function isMonthlyWorkbookMode(range) {
   return elements.exportFormatSelect.value === "excel"
     && elements.exportScopeSelect.value === "all"
-    && /^Monat /.test(range.label);
+    && range.kind === "month";
 }
 
 function buildExportRows(rangeStart, rangeEnd, projectIdFilter = null) {
@@ -2748,7 +3706,7 @@ function buildExportRows(rangeStart, rangeEnd, projectIdFilter = null) {
       const durationMs = getDurationMs(entry);
       return {
         date: toDateInputValue(new Date(entry.start)),
-        project: project?.name || "Unbekanntes Projekt",
+        project: project?.name || t("unknownProject"),
         projectColor: getProjectColor(entry.projectId),
         start: formatDateTime(entry.start),
         end: formatDateTime(entry.end),
@@ -2828,47 +3786,47 @@ function createSpreadsheetXml(rows, label, includeProjectSheets = false) {
     </Style>
     ${stylesMarkup}
   </Styles>
-  <Worksheet ss:Name="Zeiten">
+  <Worksheet ss:Name="${escapeXml(t("timesSection"))}">
     <Table>
       <Row>
-        <Cell ss:StyleID="Title"><Data ss:Type="String">Export</Data></Cell>
+        <Cell ss:StyleID="Title"><Data ss:Type="String">${escapeXml(t("reportTitle"))}</Data></Cell>
         <Cell ss:StyleID="Title"><Data ss:Type="String">${escapeXml(label)}</Data></Cell>
       </Row>
       <Row>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Datum</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Projekt</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Start</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Ende</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (h)</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Typ</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Notiz</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("date"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportProject"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportStart"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportEnd"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportHours"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportDuration"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportType"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportNote"))}</Data></Cell>
       </Row>
       ${dataRows}
     </Table>
   </Worksheet>
-  <Worksheet ss:Name="Summen">
+  <Worksheet ss:Name="${escapeXml(t("reportProjectSummary"))}">
     <Table>
       <Row>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Projekt</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (h)</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportProject"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportDuration"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportHours"))}</Data></Cell>
       </Row>
       ${summaryRows}
       <Row>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Gesamt</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportTotal"))}</Data></Cell>
         <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(formatDuration(totalHours * 3600000))}</Data></Cell>
         <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(totalHours.toFixed(2).replace(".", ","))}</Data></Cell>
       </Row>
     </Table>
   </Worksheet>
-  <Worksheet ss:Name="Statistik">
+  <Worksheet ss:Name="${escapeXml(t("reportStatistics"))}">
     <Table>
       <Row>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Projekt</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (hh:mm)</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer (h)</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Anteil</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportProject"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportDuration"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportHours"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportShare"))}</Data></Cell>
       </Row>
       ${statisticRows}
     </Table>
@@ -2910,7 +3868,7 @@ function summarizeRowsIntoSheets(rows, styleMap) {
   }
 
   return [...rowsByProject.entries()].map(([project, projectRows]) => {
-    const safeName = project.replace(/[\\/*?:[\]]/g, "").slice(0, 28) || "Projekt";
+    const safeName = project.replace(/[\\/*?:[\]]/g, "").slice(0, 28) || t("reportProject");
     const projectColor = projectRows[0]?.projectColor || getFallbackProjectColor(project);
     const dataRows = projectRows.map((row) => `
       <Row>
@@ -2932,11 +3890,11 @@ function summarizeRowsIntoSheets(rows, styleMap) {
         <Cell><Data ss:Type="String"></Data></Cell>
       </Row>
       <Row>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Datum</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Start</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Ende</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Dauer</Data></Cell>
-        <Cell ss:StyleID="Header"><Data ss:Type="String">Notiz</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("date"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportStart"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportEnd"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportDuration"))}</Data></Cell>
+        <Cell ss:StyleID="Header"><Data ss:Type="String">${escapeXml(t("reportNote"))}</Data></Cell>
       </Row>
       ${dataRows}
     </Table>
@@ -2996,10 +3954,21 @@ function createId() {
 }
 
 function formatDateTime(value) {
-  return new Intl.DateTimeFormat("de-DE", {
+  return new Intl.DateTimeFormat(getLocaleForFormatting(), {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function getLocaleForFormatting() {
+  const language = getEffectiveLanguage();
+  if (language === "fr") {
+    return "fr-FR";
+  }
+  if (language === "en") {
+    return "en-US";
+  }
+  return "de-DE";
 }
 
 function formatDuration(durationMs, withSeconds = false) {

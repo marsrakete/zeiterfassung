@@ -297,16 +297,25 @@
     <div id="settingsForm" class="dialog-body">
       <h3>Daten & Export</h3>
       <div class="settings-copy">
-        <strong>Datenspeicherung</strong>
-        <p>Alle Projekte und Zeitblöcke werden lokal im Browser auf diesem Gerät gespeichert.</p>
-        <p>Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.</p>
+        <strong id="dataStorageTitle">Datenspeicherung</strong>
+        <p id="dataStorageText1">Alle Projekte und Zeitblöcke werden lokal im Browser auf diesem Gerät gespeichert.</p>
+        <p id="dataStorageText2">Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.</p>
         <p id="backupStatusText">Noch kein App-Daten-Backup erstellt.</p>
       </div>
       <section class="settings-group">
         <div class="settings-copy">
-          <strong>Einstellungen</strong>
+          <strong id="settingsGroupTitle">Einstellungen</strong>
         </div>
         <div class="settings-actions">
+          <label>
+            <span>Sprache</span>
+            <select id="languageSelect">
+              <option value="auto">Automatisch</option>
+              <option value="de">Deutsch</option>
+              <option value="en">Englisch</option>
+              <option value="fr">Französisch</option>
+            </select>
+          </label>
           <button id="checkForUpdatesButton" class="secondary-button" type="button">Auf Update prüfen</button>
           <p id="updateCheckStatus" class="settings-status" hidden></p>
           <button id="reloadAppButton" class="primary-button" type="button" hidden>Neu laden</button>
@@ -335,7 +344,7 @@
       </section>
       <section class="settings-group">
         <div class="settings-copy">
-          <strong>Datenexport</strong>
+          <strong id="dataExportTitle">Datenexport</strong>
         </div>
         <form id="exportForm" class="stack-form">
           <label>
@@ -356,26 +365,26 @@
             </select>
           </label>
           <label id="exportDayField">
-            <span>Tag</span>
+            <span id="exportDayLabel">Tag</span>
             <input id="exportDay" type="date">
           </label>
           <label id="exportWeekField" hidden>
-            <span>Woche</span>
+            <span id="exportWeekLabel">Woche</span>
             <input id="exportWeek" type="week">
           </label>
           <label id="exportMonthField" hidden>
-            <span>Monat</span>
+            <span id="exportMonthLabel">Monat</span>
             <input id="exportMonth" type="month">
           </label>
           <label>
-            <span>Exportumfang</span>
+            <span>Projektumfang</span>
             <select id="exportScopeSelect">
               <option value="all">Alle Projekte</option>
               <option value="single">Ein Projekt</option>
             </select>
           </label>
           <label id="exportProjectField" hidden>
-            <span>Projekt</span>
+            <span>Einzelprojekt</span>
             <select id="exportProjectSelect"></select>
           </label>
           <button class="primary-button" type="submit">Exportieren</button>
@@ -383,9 +392,9 @@
       </section>
       <section class="settings-group">
         <div class="settings-copy">
-          <strong>App-Daten</strong>
-          <p>Gerätewechsel</p>
-          <p>Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
+          <strong id="appDataTitle">App-Daten</strong>
+          <p id="deviceTransferTitle">Gerätewechsel</p>
+          <p id="deviceTransferText">Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
         </div>
         <div class="settings-actions">
           <button id="exportDataButton" class="secondary-button" type="button">App-Daten exportieren</button>

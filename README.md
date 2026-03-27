@@ -4,6 +4,10 @@
 
 Eine schlanke Progressive Web App zur Projekt-Zeiterfassung mit lokaler Speicherung, Live-Buchung und Excel-Export.
 
+## Für wen ist die App gedacht?
+
+Die App ist gedacht für Personen, die ihre Arbeitszeit projektbezogen auf einem einzelnen Gerät erfassen und dabei bewusst ohne Server, Datenbank oder Cloud-Synchronisation arbeiten wollen.
+
 ## Überblick
 
 Die App ist bewusst einfach gehalten:
@@ -184,8 +188,9 @@ Beim Monats-Excel-Export für alle Projekte wird zusätzlich eine Sammelmappe mi
 
 ### 9. Einstellungen
 
-Im Bereich `Daten & Export` gibt es zusätzlich diese Einstellungen:
+Im Bereich `Einstellungen` gibt es zusätzlich diese Einstellungen:
 
+- eine Sprachwahl mit `Automatisch`, `Deutsch`, `Englisch` oder `Französisch`
 - eine Rundungseinstellung mit `Keine Rundung`, 5, 10 oder 15 Minuten
 - eine zuschaltbare Stundenerinnerung für laufende Projekte über die Notification-API des Browsers
 - tägliche und wöchentliche Sollzeiten
@@ -193,7 +198,7 @@ Im Bereich `Daten & Export` gibt es zusätzlich diese Einstellungen:
 
 ### 10. App-Daten übertragen
 
-Ebenfalls im Bereich `Daten & Export` gibt es:
+Ebenfalls im Bereich `App-Daten` gibt es:
 
 - `App-Daten exportieren`: erstellt eine JSON-Datei mit allen lokal gespeicherten Projekten und Zeitblöcken
 - `App-Daten importieren`: führt Daten zusammen und überspringt erkannte Dubletten
