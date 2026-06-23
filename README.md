@@ -36,19 +36,16 @@ Für einen Gerätewechsel oder eine Sicherung gibt es deshalb einen eigenen Date
 
 ## Schnellstart
 
-Im Projektordner ausführen:
+1. Die App im Browser öffnen und bei Bedarf als App installieren.
+   Auf iPhone und iPad funktioniert das über Safari und `Zum Home-Bildschirm`, auf Android über `App installieren` oder `Zum Startbildschirm hinzufügen`, am PC über die Installationsfunktion von Edge oder Chrome.
+2. Über `Neues Projekt` die ersten Projekte anlegen.
+   Sinnvoll sind klare Namen wie Kunde, Auftrag oder Tätigkeit. Farben und Notizen können später angepasst werden.
+3. Zeiten per `Einbuchen` und `Ausbuchen` live erfassen oder Zeitblöcke manuell nachtragen.
+4. Regelmäßig unter `Einstellungen` > `App-Daten` ein Backup exportieren.
+   Diese JSON-Datei enthält Projekte und Zeitblöcke und kann später wieder importiert werden.
+5. Für Auswertungen die gebuchten Zeiten als Excel, CSV oder HTML-Monatsbericht exportieren.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start-server.ps1
-```
-
-Danach ist die App unter [http://localhost:4173/](http://localhost:4173/) erreichbar.
-
-Optional mit anderem Port:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
-```
+Die wichtigsten Alltagsfunktionen sind damit abgedeckt: Projekte anlegen, Zeiten buchen, Daten sichern und Berichte weitergeben.
 
 ## Installation als App
 
@@ -243,3 +240,21 @@ Für wichtige Daten empfiehlt sich zusätzlich ein regelmäßiger Export der App
 - Der Import von App-Daten führt Daten zusammen und erkennt Dubletten
 - Die integrierte Hilfe rendert das README direkt in der App und bleibt dadurch mit der Dokumentation synchron
 - Die App benötigt keinen Build-Prozess und kann direkt als statische Webanwendung betrieben werden
+
+## Für Techies
+
+### Lokaler Start im Projektordner
+
+Im Projektordner kann die App mit dem mitgelieferten PowerShell-Skript gestartet werden:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-server.ps1
+```
+
+Danach ist die App unter [http://localhost:5014/](http://localhost:5014/) erreichbar.
+
+Optional mit anderem Port:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -Port 8080
+```

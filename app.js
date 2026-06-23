@@ -1,7 +1,13 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
 const LAST_SEEN_BUILD_KEY = "zeiterfassung-last-seen-build";
 const LANGUAGE_STORAGE_KEY = "zeiterfassung-language";
+const APP_SHARE_URL = "https://marsrakete.github.io/zeiterfassung/";
 const DATA_SCHEMA_VERSION = 3;
+const APP_BUILD_INFO = Object.freeze({
+  appVersion: "1.1.18",
+  cacheVersion: "v52",
+  label: "Aktueller Stand"
+});
 const DEFAULT_VERSION_INFO = Object.freeze({
   appVersion: "unbekannt",
   cacheVersion: "offline",
@@ -109,6 +115,8 @@ const TRANSLATIONS = {
     timerReminder: "Stundenerinnerung aktivieren",
     dailyGoalHours: "Sollzeit pro Tag (Stunden)",
     weeklyGoalHours: "Sollzeit pro Woche (Stunden)",
+    updateGroupTitle: "Update",
+    updateGroupDescription: "Prüfe, ob eine neue App-Version verfügbar ist, und lade sie bei Bedarf neu.",
     checkUpdates: "Auf Update prüfen",
     reload: "Neu laden",
     exportFormat: "Format",
@@ -133,6 +141,14 @@ const TRANSLATIONS = {
     deviceTransferText: "Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.",
     supportTitle: "Support",
     supportIntro: "Wenn dir die App hilft, kannst du das Projekt auf Ko-Fi unterstützen.",
+    recommendTitle: "Weiterempfehlen",
+    recommendDescription: "Teile den Link zur Zeiterfassung direkt aus der App.",
+    recommendAppButton: "App teilen",
+    recommendScanHint: "Oder mit dem Smartphone scannen:",
+    recommendQrAlt: "QR-Code zur Zeiterfassung",
+    recommendAppText: "Schau dir die Zeiterfassung an: Projekte anlegen, Zeiten buchen und Berichte exportieren.",
+    recommendCopied: "Link zur App wurde in die Zwischenablage kopiert.",
+    recommendUnavailable: "Teilen wird in diesem Browser nicht unterstützt.",
     exportShareTitle: "Zeiterfassung exportieren",
     exportReportTitle: "Zeiterfassungsbericht exportieren",
     exportDataTitle: "Zeiterfassungsdaten exportieren",
@@ -332,6 +348,8 @@ const TRANSLATIONS = {
     timerReminder: "Enable hourly reminder",
     dailyGoalHours: "Daily target hours",
     weeklyGoalHours: "Weekly target hours",
+    updateGroupTitle: "Update",
+    updateGroupDescription: "Check whether a new app version is available and reload it if needed.",
     checkUpdates: "Check for updates",
     reload: "Reload",
     exportFormat: "Format",
@@ -356,6 +374,14 @@ const TRANSLATIONS = {
     deviceTransferText: "Export your app data as a JSON file and import it again on the other device.",
     supportTitle: "Support",
     supportIntro: "If the app helps you, you can support the project on Ko-Fi.",
+    recommendTitle: "Recommend",
+    recommendDescription: "Share the time tracking app link directly from the app.",
+    recommendAppButton: "Share app",
+    recommendScanHint: "Or scan it with your phone:",
+    recommendQrAlt: "QR code for the time tracking app",
+    recommendAppText: "Take a look at this time tracking app: create projects, track time, and export reports.",
+    recommendCopied: "The app link was copied to the clipboard.",
+    recommendUnavailable: "Sharing is not supported in this browser.",
     exportShareTitle: "Export time tracking",
     exportReportTitle: "Export time tracking report",
     exportDataTitle: "Export time tracking data",
@@ -555,6 +581,8 @@ const TRANSLATIONS = {
     timerReminder: "Activer le rappel horaire",
     dailyGoalHours: "Heures cibles par jour",
     weeklyGoalHours: "Heures cibles par semaine",
+    updateGroupTitle: "Mise à jour",
+    updateGroupDescription: "Vérifiez si une nouvelle version de l'application est disponible et rechargez-la si nécessaire.",
     checkUpdates: "Vérifier les mises à jour",
     reload: "Recharger",
     exportFormat: "Format",
@@ -579,6 +607,14 @@ const TRANSLATIONS = {
     deviceTransferText: "Exportez vos données d'application en tant que fichier JSON et importez-les à nouveau sur l'autre appareil.",
     supportTitle: "Soutien",
     supportIntro: "Si l'application vous aide, vous pouvez soutenir le projet sur Ko-Fi.",
+    recommendTitle: "Recommander",
+    recommendDescription: "Partagez le lien de l'application de suivi du temps directement depuis l'application.",
+    recommendAppButton: "Partager l'app",
+    recommendScanHint: "Ou scannez avec votre téléphone :",
+    recommendQrAlt: "Code QR vers l'application de suivi du temps",
+    recommendAppText: "Découvrez cette application de suivi du temps : créez des projets, saisissez le temps et exportez des rapports.",
+    recommendCopied: "Le lien de l'application a été copié dans le presse-papiers.",
+    recommendUnavailable: "Le partage n'est pas pris en charge dans ce navigateur.",
     exportShareTitle: "Exporter le suivi du temps",
     exportReportTitle: "Exporter le rapport de suivi du temps",
     exportDataTitle: "Exporter les données de suivi du temps",
@@ -708,7 +744,7 @@ let roundingNoticeTimeoutId = null;
 let touchDragProjectId = null;
 let touchDragTargetId = null;
 let serviceWorkerRegistration = null;
-let versionInfo = { ...DEFAULT_VERSION_INFO };
+let versionInfo = { ...APP_BUILD_INFO };
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
@@ -798,6 +834,10 @@ const elements = {
   exportDataButton: document.querySelector("#exportDataButton"),
   importDataButton: document.querySelector("#importDataButton"),
   importDataInput: document.querySelector("#importDataInput"),
+  recommendAppButton: document.querySelector("#recommendAppButton"),
+  recommendQrImage: document.querySelector("#recommendQrImage"),
+  recommendUrl: document.querySelector("#recommendUrl"),
+  recommendStatus: document.querySelector("#recommendStatus"),
   projectEditorDialog: document.querySelector("#projectEditorDialog"),
   projectEditorForm: document.querySelector("#projectEditorForm"),
   projectEditorId: document.querySelector("#projectEditorId"),
@@ -897,6 +937,56 @@ async function shareOrDownloadFile(file, fallbackName, title) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function setRecommendStatus(message, isError = false) {
+  if (!elements.recommendStatus) {
+    return;
+  }
+  elements.recommendStatus.textContent = message || "";
+  elements.recommendStatus.hidden = !message;
+  elements.recommendStatus.classList.toggle("is-error", Boolean(isError && message));
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const helper = document.createElement("textarea");
+  helper.value = text;
+  helper.setAttribute("readonly", "readonly");
+  helper.style.position = "fixed";
+  helper.style.opacity = "0";
+  helper.style.pointerEvents = "none";
+  document.body.append(helper);
+  helper.select();
+  document.execCommand("copy");
+  helper.remove();
+}
+
+async function shareAppRecommendation() {
+  const payload = {
+    title: t("appTitle"),
+    text: t("recommendAppText"),
+    url: APP_SHARE_URL
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(payload);
+      return;
+    }
+
+    await copyTextToClipboard(`${payload.text}\n${payload.url}`);
+    setRecommendStatus(t("recommendCopied"));
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      return;
+    }
+    setRecommendStatus(t("recommendUnavailable"), true);
+  }
+}
+
 function initializeDefaults() {
   const now = new Date();
   elements.exportDay.value = toDateInputValue(now);
@@ -927,7 +1017,7 @@ async function checkForUpdates() {
     const remoteAppVersion = String(remoteVersion.appVersion || "");
     const remoteCacheVersion = String(remoteVersion.cacheVersion || "");
     const remoteLabel = remoteVersion.label ? String(remoteVersion.label) : "";
-    const localBuild = getBuildSignature(getVersionInfo());
+    const localBuild = getBuildSignature(APP_BUILD_INFO);
     const remoteBuild = getBuildSignature(remoteVersion);
 
     if (!remoteAppVersion || !remoteCacheVersion) {
@@ -955,9 +1045,71 @@ function setUpdateCheckStatus(message, showReloadButton = false) {
   elements.reloadAppButton.hidden = !showReloadButton;
 }
 
+function waitForServiceWorkerState(worker, expectedState, timeout = 4000) {
+  if (!worker || worker.state === expectedState) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(resolve, timeout);
+    worker.addEventListener("statechange", () => {
+      if (worker.state === expectedState) {
+        clearTimeout(timeoutId);
+        resolve();
+      }
+    });
+  });
+}
+
+function waitForControllerChange(timeout = 4000) {
+  if (!("serviceWorker" in navigator)) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(resolve, timeout);
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      clearTimeout(timeoutId);
+      resolve();
+    }, { once: true });
+  });
+}
+
+async function reloadAppAfterUpdate() {
+  elements.reloadAppButton.disabled = true;
+  setUpdateCheckStatus(t("checkingUpdates"), true);
+
+  try {
+    const registration = serviceWorkerRegistration || await navigator.serviceWorker?.getRegistration?.();
+    const updatedRegistration = await registration?.update?.() || registration;
+    const nextWorker = updatedRegistration?.installing || updatedRegistration?.waiting;
+
+    if (nextWorker) {
+      await Promise.race([
+        waitForServiceWorkerState(nextWorker, "activated"),
+        waitForControllerChange()
+      ]);
+    }
+  } catch {
+    // Ein normaler Reload bleibt der beste Fallback, wenn die SW-Aktualisierung nicht sauber meldet.
+  } finally {
+    window.location.reload();
+  }
+}
+
 function showUpdateNoticeIfNeeded(nextVersionInfo = getVersionInfo()) {
-  const currentBuild = getBuildSignature(nextVersionInfo);
+  const currentBuild = getBuildSignature(APP_BUILD_INFO);
+  const availableBuild = getBuildSignature(nextVersionInfo);
   const lastSeenBuild = localStorage.getItem(LAST_SEEN_BUILD_KEY);
+
+  if (availableBuild !== currentBuild) {
+    const suffix = nextVersionInfo.label ? ` (${nextVersionInfo.label})` : "";
+    elements.roundingNotice.textContent = `${t("updateAvailablePrefix")}: ${nextVersionInfo.appVersion} · ${nextVersionInfo.cacheVersion}${suffix}. ${t("updateAvailableAction")}`;
+    elements.roundingNotice.hidden = false;
+    clearTimeout(roundingNoticeTimeoutId);
+    void serviceWorkerRegistration?.update?.();
+    return;
+  }
 
   if (!lastSeenBuild) {
     localStorage.setItem(LAST_SEEN_BUILD_KEY, currentBuild);
@@ -999,17 +1151,21 @@ async function fetchVersionInfo() {
 }
 
 async function loadVersionInfo({ showUpdateNotice = false } = {}) {
+  let remoteVersion = null;
   let versionLoaded = false;
   try {
-    versionInfo = await fetchVersionInfo();
+    remoteVersion = await fetchVersionInfo();
+    versionInfo = getBuildSignature(remoteVersion) === getBuildSignature(APP_BUILD_INFO)
+      ? remoteVersion
+      : { ...APP_BUILD_INFO };
     versionLoaded = true;
   } catch {
-    versionInfo = { ...DEFAULT_VERSION_INFO };
+    versionInfo = { ...APP_BUILD_INFO };
   }
 
   renderVersionLabel();
   if (showUpdateNotice && versionLoaded) {
-    showUpdateNoticeIfNeeded(versionInfo);
+    showUpdateNoticeIfNeeded(remoteVersion);
   }
 }
 
@@ -1194,12 +1350,20 @@ function applyTranslations() {
   setText("#dataStorageTitle", t("dataStorageTitle"));
   setText("#dataStorageText1", t("dataStorageText1"));
   setText("#dataStorageText2", t("dataStorageText2"));
+  setText("#updateGroupTitle", t("updateGroupTitle"));
+  setText("#updateGroupDescription", t("updateGroupDescription"));
   setText("#settingsGroupTitle", t("settingsGroup"));
   setText("#appDataTitle", t("appDataGroup"));
   setText("#deviceTransferTitle", t("deviceTransferTitle"));
   setText("#deviceTransferText", t("deviceTransferText"));
   setText("#supportTitle", t("supportTitle"));
   setText("#supportIntro", t("supportIntro"));
+  setText("#recommendTitle", t("recommendTitle"));
+  setText("#recommendDescription", t("recommendDescription"));
+  setText("#recommendAppButton", t("recommendAppButton"));
+  setText("#recommendScanHint", t("recommendScanHint"));
+  setText("#recommendUrl", APP_SHARE_URL);
+  setAttr("#recommendQrImage", "alt", t("recommendQrAlt"));
   const settingsLabels = document.querySelectorAll(".settings-actions label span");
   if (settingsLabels[0]) settingsLabels[0].textContent = t("language");
   if (settingsLabels[1]) settingsLabels[1].textContent = t("rounding");
@@ -1286,6 +1450,7 @@ function bindEvents() {
   elements.pauseActiveSessionButton.addEventListener("click", pauseActiveSession);
   elements.resumeLastProjectButton.addEventListener("click", resumeLastStoppedProject);
   elements.settingsButton.addEventListener("click", () => {
+    setRecommendStatus("");
     elements.settingsDialog.showModal();
   });
   elements.exportButton.addEventListener("click", () => {
@@ -1298,10 +1463,7 @@ function bindEvents() {
     elements.exportDialog.close();
   });
   elements.checkForUpdatesButton.addEventListener("click", checkForUpdates);
-  elements.reloadAppButton.addEventListener("click", async () => {
-    await serviceWorkerRegistration?.update();
-    window.location.reload();
-  });
+  elements.reloadAppButton.addEventListener("click", reloadAppAfterUpdate);
   elements.languageSelect.addEventListener("change", handleLanguageChange);
   elements.roundingSelect.addEventListener("change", handleRoundingChange);
   elements.timerReminderCheckbox.addEventListener("change", handleTimerReminderToggle);
@@ -1313,6 +1475,9 @@ function bindEvents() {
     elements.importDataInput.click();
   });
   elements.importDataInput.addEventListener("change", handleImportData);
+  elements.recommendAppButton?.addEventListener("click", () => {
+    void shareAppRecommendation();
+  });
   elements.projectCreateCancelButton.addEventListener("click", () => {
     elements.projectCreateDialog.close();
   });

@@ -696,6 +696,47 @@ th {
   width: auto;
 }
 
+.share-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(103, 74, 33, 0.12);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.share-qr-image {
+  width: 112px;
+  height: 112px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #fff;
+  display: block;
+}
+
+.share-card-copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.share-url {
+  display: inline-block;
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(36, 29, 19, 0.08);
+  color: var(--text);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.settings-status.is-error {
+  color: var(--danger);
+}
+
 .note-dialog-text {
   color: var(--muted);
   white-space: pre-wrap;
@@ -835,6 +876,13 @@ th {
   height: auto;
   display: block;
   border-radius: 16px;
+}
+
+.help-content figure:first-of-type img {
+  width: min(96px, 32vw);
+  max-height: 96px;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 .calendar-legend {
@@ -979,6 +1027,13 @@ th {
   .kofi-link img {
     max-width: min(100%, 230px);
     height: auto !important;
+  }
+  .share-card {
+    grid-template-columns: 1fr;
+  }
+  .share-qr-image {
+    width: 104px;
+    height: 104px;
   }
   .panel, .full-width { grid-column: 1 / -1; }
   .panel { padding: 18px; }

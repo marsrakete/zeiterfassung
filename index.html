@@ -311,6 +311,17 @@
       </div>
       <section class="settings-group">
         <div class="settings-copy">
+          <strong id="updateGroupTitle">Update</strong>
+          <p id="updateGroupDescription">Prüfe, ob eine neue App-Version verfügbar ist, und lade sie bei Bedarf neu.</p>
+        </div>
+        <div class="settings-actions">
+          <button id="checkForUpdatesButton" class="secondary-button" type="button">Auf Update prüfen</button>
+          <p id="updateCheckStatus" class="settings-status" hidden></p>
+          <button id="reloadAppButton" class="primary-button" type="button" hidden>Neu laden</button>
+        </div>
+      </section>
+      <section class="settings-group">
+        <div class="settings-copy">
           <strong id="settingsGroupTitle">Einstellungen</strong>
         </div>
         <div class="settings-actions">
@@ -323,9 +334,6 @@
               <option value="fr">Französisch</option>
             </select>
           </label>
-          <button id="checkForUpdatesButton" class="secondary-button" type="button">Auf Update prüfen</button>
-          <p id="updateCheckStatus" class="settings-status" hidden></p>
-          <button id="reloadAppButton" class="primary-button" type="button" hidden>Neu laden</button>
           <label>
             <span>Rundung beim Ausbuchen</span>
             <select id="roundingSelect">
@@ -381,6 +389,28 @@
             alt="Support this app on Ko-Fi"
           />
         </a>
+      </section>
+      <section class="settings-group">
+        <div class="settings-copy">
+          <strong id="recommendTitle">Weiterempfehlen</strong>
+          <p id="recommendDescription">Teile den Link zur Zeiterfassung direkt aus der App.</p>
+        </div>
+        <div class="settings-actions">
+          <button id="recommendAppButton" class="primary-button" type="button">App teilen</button>
+          <p id="recommendStatus" class="settings-status" hidden></p>
+        </div>
+        <div class="share-card">
+          <img
+            id="recommendQrImage"
+            class="share-qr-image"
+            src="./icons/zeiterfassung-share-qr.svg"
+            alt="QR-Code zur Zeiterfassung"
+          >
+          <div class="share-card-copy">
+            <p id="recommendScanHint" class="settings-status">Oder mit dem Smartphone scannen:</p>
+            <code id="recommendUrl" class="share-url">https://marsrakete.github.io/zeiterfassung/</code>
+          </div>
+        </div>
       </section>
       <div class="dialog-actions">
         <button id="closeSettingsButton" class="primary-button" type="button">Schließen</button>

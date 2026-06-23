@@ -1,5 +1,6 @@
-const CACHE_PREFIX = "zeiterfassung-cache-v47";
-const CACHE_NAME = CACHE_PREFIX;
+const CACHE_PREFIX = "zeiterfassung-cache-";
+const CACHE_VERSION = "v52";
+const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,7 +10,8 @@ const ASSETS = [
   "./version.json",
   "./manifest.webmanifest",
   "./icons/app-icon.svg",
-  "./icons/kofi-button.svg"
+  "./icons/kofi-button.svg",
+  "./icons/zeiterfassung-share-qr.svg"
 ];
 
 self.addEventListener("install", (event) => {
@@ -28,47 +30,38 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+function networkFirst(request, fallbackRequest = request) {
+  return fetch(request)
+    .then((response) => {
+      const responseClone = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+      return response;
+    })
+    .catch(() => caches.match(request).then((cached) => cached || caches.match(fallbackRequest)));
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
     return;
   }
 
   const requestUrl = new URL(event.request.url);
-  if (requestUrl.pathname.endsWith("/README.md") || requestUrl.pathname.endsWith("/version.json")) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          return response;
-        })
-        .catch(() => caches.match(event.request).then((cached) => {
-          if (cached) {
-            return cached;
-          }
-          return requestUrl.pathname.endsWith("/version.json")
-            ? caches.match("./version.json")
-            : caches.match("./README.md");
-        }))
-    );
+  if (event.request.mode === "navigate") {
+    event.respondWith(networkFirst(event.request, "./index.html"));
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
+  if (requestUrl.pathname.endsWith("/README.md") || requestUrl.pathname.endsWith("/version.json")) {
+    event.respondWith(networkFirst(
+      event.request,
+      requestUrl.pathname.endsWith("/version.json") ? "./version.json" : "./README.md"
+    ));
+    return;
+  }
 
-      return fetch(event.request)
-        .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          return response;
-        })
-        .catch(() => caches.match("./index.html"));
-    })
-  );
+  if (requestUrl.origin === self.location.origin) {
+    event.respondWith(networkFirst(event.request, "./index.html"));
+  }
 });
 
 self.addEventListener("notificationclick", (event) => {
