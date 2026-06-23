@@ -13,7 +13,8 @@ const TRANSLATIONS = {
   de: {
     appTitle: "Zeiterfassung",
     appEyebrow: "Zeiterfassung",
-    settingsOpen: "Daten und Export öffnen",
+    settingsOpen: "Einstellungen öffnen",
+    exportOpen: "Datenexport öffnen",
     settingsTitle: "Daten & Export",
     settingsDialogTitle: "Einstellungen",
     activeStatus: "Aktiv",
@@ -130,6 +131,8 @@ const TRANSLATIONS = {
     importAppData: "App-Daten importieren",
     deviceTransferTitle: "Gerätewechsel",
     deviceTransferText: "Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.",
+    supportTitle: "Support",
+    supportIntro: "Wenn dir die App hilft, kannst du das Projekt auf Ko-Fi unterstützen.",
     exportShareTitle: "Zeiterfassung exportieren",
     exportReportTitle: "Zeiterfassungsbericht exportieren",
     exportDataTitle: "Zeiterfassungsdaten exportieren",
@@ -233,7 +236,8 @@ const TRANSLATIONS = {
   en: {
     appTitle: "Time Tracking",
     appEyebrow: "Time Tracking",
-    settingsOpen: "Open data and export",
+    settingsOpen: "Open settings",
+    exportOpen: "Open data export",
     settingsTitle: "Data & Export",
     settingsDialogTitle: "Settings",
     activeStatus: "Active",
@@ -350,6 +354,8 @@ const TRANSLATIONS = {
     importAppData: "Import app data",
     deviceTransferTitle: "Device switch",
     deviceTransferText: "Export your app data as a JSON file and import it again on the other device.",
+    supportTitle: "Support",
+    supportIntro: "If the app helps you, you can support the project on Ko-Fi.",
     exportShareTitle: "Export time tracking",
     exportReportTitle: "Export time tracking report",
     exportDataTitle: "Export time tracking data",
@@ -453,7 +459,8 @@ const TRANSLATIONS = {
   fr: {
     appTitle: "Suivi du temps",
     appEyebrow: "Suivi du temps",
-    settingsOpen: "Ouvrir données et export",
+    settingsOpen: "Ouvrir les paramètres",
+    exportOpen: "Ouvrir l'export des données",
     settingsTitle: "Données et export",
     settingsDialogTitle: "Paramètres",
     activeStatus: "Actif",
@@ -570,6 +577,8 @@ const TRANSLATIONS = {
     importAppData: "Importer les données",
     deviceTransferTitle: "Changement d'appareil",
     deviceTransferText: "Exportez vos données d'application en tant que fichier JSON et importez-les à nouveau sur l'autre appareil.",
+    supportTitle: "Soutien",
+    supportIntro: "Si l'application vous aide, vous pouvez soutenir le projet sur Ko-Fi.",
     exportShareTitle: "Exporter le suivi du temps",
     exportReportTitle: "Exporter le rapport de suivi du temps",
     exportDataTitle: "Exporter les données de suivi du temps",
@@ -703,6 +712,7 @@ let versionInfo = { ...DEFAULT_VERSION_INFO };
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
+  exportButton: document.querySelector("#exportButton"),
   activeProjectName: document.querySelector("#activeProjectName"),
   activeTimer: document.querySelector("#activeTimer"),
   versionLabel: document.querySelector("#versionLabel"),
@@ -771,6 +781,8 @@ const elements = {
   activeSessionCancelButton: document.querySelector("#activeSessionCancelButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   closeSettingsButton: document.querySelector("#closeSettingsButton"),
+  exportDialog: document.querySelector("#exportDialog"),
+  closeExportButton: document.querySelector("#closeExportButton"),
   languageSelect: document.querySelector("#languageSelect"),
   checkForUpdatesButton: document.querySelector("#checkForUpdatesButton"),
   updateCheckStatus: document.querySelector("#updateCheckStatus"),
@@ -1097,6 +1109,8 @@ function applyTranslations() {
   setText(".hero-headline .eyebrow", t("appEyebrow"));
   setAttr("#settingsButton", "aria-label", t("settingsOpen"));
   setAttr("#settingsButton", "title", t("settingsOpen"));
+  setAttr("#exportButton", "aria-label", t("exportOpen"));
+  setAttr("#exportButton", "title", t("exportOpen"));
   setText("#editActiveSessionButton", t("editLive"));
   setText("#pauseActiveSessionButton", t("stop"));
   setText("#resumeLastProjectButton", t("resumeLast"));
@@ -1113,6 +1127,7 @@ function applyTranslations() {
   setText("#helpDetails summary", t("helpSummary"));
   setText("#calendarDetails summary", t("showCalendar"));
   setText("#settingsForm h3", t("settingsDialogTitle"));
+  setText("#dataExportTitle", t("dataExportGroup"));
   setText("#projectCreateDialog h3", t("projectCreateTitle"));
   setText("#projectEditorDialog h3", t("projectEditorTitle"));
   setText("#entryEditorDialog h3", t("entryEditorHeading"));
@@ -1180,10 +1195,11 @@ function applyTranslations() {
   setText("#dataStorageText1", t("dataStorageText1"));
   setText("#dataStorageText2", t("dataStorageText2"));
   setText("#settingsGroupTitle", t("settingsGroup"));
-  setText("#dataExportTitle", t("dataExportGroup"));
   setText("#appDataTitle", t("appDataGroup"));
   setText("#deviceTransferTitle", t("deviceTransferTitle"));
   setText("#deviceTransferText", t("deviceTransferText"));
+  setText("#supportTitle", t("supportTitle"));
+  setText("#supportIntro", t("supportIntro"));
   const settingsLabels = document.querySelectorAll(".settings-actions label span");
   if (settingsLabels[0]) settingsLabels[0].textContent = t("language");
   if (settingsLabels[1]) settingsLabels[1].textContent = t("rounding");
@@ -1218,6 +1234,7 @@ function applyTranslations() {
   if (exportScopeOptions[0]) exportScopeOptions[0].textContent = t("exportAll");
   if (exportScopeOptions[1]) exportScopeOptions[1].textContent = t("exportSingle");
   setText("#exportForm button[type=\"submit\"]", t("exportButton"));
+  setText("#closeExportButton", t("close"));
 
   const roundingOptions = elements.roundingSelect.querySelectorAll("option");
   if (roundingOptions[0]) roundingOptions[0].textContent = t("noRounding");
@@ -1271,8 +1288,14 @@ function bindEvents() {
   elements.settingsButton.addEventListener("click", () => {
     elements.settingsDialog.showModal();
   });
+  elements.exportButton.addEventListener("click", () => {
+    elements.exportDialog.showModal();
+  });
   elements.closeSettingsButton.addEventListener("click", () => {
     elements.settingsDialog.close();
+  });
+  elements.closeExportButton.addEventListener("click", () => {
+    elements.exportDialog.close();
   });
   elements.checkForUpdatesButton.addEventListener("click", checkForUpdates);
   elements.reloadAppButton.addEventListener("click", async () => {

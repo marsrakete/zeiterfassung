@@ -20,11 +20,18 @@
       <div>
         <div class="hero-headline">
           <p class="eyebrow">Zeiterfassung</p>
-          <button id="settingsButton" class="icon-button" type="button" aria-label="Daten und Export öffnen" title="Daten und Export">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.13-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"/>
-            </svg>
-          </button>
+          <div class="hero-toolbar">
+            <button id="exportButton" class="icon-button" type="button" aria-label="Datenexport öffnen" title="Datenexport">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.3a1 1 0 1 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1Zm-7 13a1 1 0 0 1 1 1v2h12v-2a1 1 0 1 1 2 0v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Z"/>
+              </svg>
+            </button>
+            <button id="settingsButton" class="icon-button" type="button" aria-label="Einstellungen öffnen" title="Einstellungen">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.13-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <p id="versionLabel" class="version-label"></p>
         <p id="roundingNotice" class="rounding-notice" hidden></p>
@@ -344,54 +351,6 @@
       </section>
       <section class="settings-group">
         <div class="settings-copy">
-          <strong id="dataExportTitle">Datenexport</strong>
-        </div>
-        <form id="exportForm" class="stack-form">
-          <label>
-            <span>Format</span>
-            <select id="exportFormatSelect">
-              <option value="excel">Excel</option>
-              <option value="csv">CSV</option>
-              <option value="report">HTML-Bericht</option>
-            </select>
-          </label>
-          <label>
-            <span>Zeitraum</span>
-            <select id="exportRangeType">
-              <option value="day">Tag</option>
-              <option value="week">Woche</option>
-              <option value="currentMonth">Aktueller Monat</option>
-              <option value="customMonth">Anderer Monat</option>
-            </select>
-          </label>
-          <label id="exportDayField">
-            <span id="exportDayLabel">Tag</span>
-            <input id="exportDay" type="date">
-          </label>
-          <label id="exportWeekField" hidden>
-            <span id="exportWeekLabel">Woche</span>
-            <input id="exportWeek" type="week">
-          </label>
-          <label id="exportMonthField" hidden>
-            <span id="exportMonthLabel">Monat</span>
-            <input id="exportMonth" type="month">
-          </label>
-          <label>
-            <span>Projektumfang</span>
-            <select id="exportScopeSelect">
-              <option value="all">Alle Projekte</option>
-              <option value="single">Ein Projekt</option>
-            </select>
-          </label>
-          <label id="exportProjectField" hidden>
-            <span>Einzelprojekt</span>
-            <select id="exportProjectSelect"></select>
-          </label>
-          <button class="primary-button" type="submit">Exportieren</button>
-        </form>
-      </section>
-      <section class="settings-group">
-        <div class="settings-copy">
           <strong id="appDataTitle">App-Daten</strong>
           <p id="deviceTransferTitle">Gerätewechsel</p>
           <p id="deviceTransferText">Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
@@ -402,9 +361,82 @@
           <input id="importDataInput" type="file" accept="application/json" hidden>
         </div>
       </section>
+      <section class="settings-group">
+        <div class="settings-copy">
+          <strong id="supportTitle">Support</strong>
+          <p id="supportIntro">Wenn dir die App hilft, kannst du das Projekt auf Ko-Fi unterstützen.</p>
+        </div>
+        <a
+          id="kofiLink"
+          class="kofi-link"
+          href="https://ko-fi.com/U7U01OC260"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img
+            height="36"
+            style="border: 0; height: 36px;"
+            src="./icons/kofi-button.svg"
+            border="0"
+            alt="Support this app on Ko-Fi"
+          />
+        </a>
+      </section>
       <div class="dialog-actions">
         <button id="closeSettingsButton" class="primary-button" type="button">Schließen</button>
       </div>
+    </div>
+  </dialog>
+
+  <dialog id="exportDialog" class="confirm-dialog settings-dialog">
+    <div id="exportDialogBody" class="dialog-body">
+      <h3 id="dataExportTitle">Datenexport</h3>
+      <form id="exportForm" class="stack-form">
+        <label>
+          <span>Format</span>
+          <select id="exportFormatSelect">
+            <option value="excel">Excel</option>
+            <option value="csv">CSV</option>
+            <option value="report">HTML-Bericht</option>
+          </select>
+        </label>
+        <label>
+          <span>Zeitraum</span>
+          <select id="exportRangeType">
+            <option value="day">Tag</option>
+            <option value="week">Woche</option>
+            <option value="currentMonth">Aktueller Monat</option>
+            <option value="customMonth">Anderer Monat</option>
+          </select>
+        </label>
+        <label id="exportDayField">
+          <span id="exportDayLabel">Tag</span>
+          <input id="exportDay" type="date">
+        </label>
+        <label id="exportWeekField" hidden>
+          <span id="exportWeekLabel">Woche</span>
+          <input id="exportWeek" type="week">
+        </label>
+        <label id="exportMonthField" hidden>
+          <span id="exportMonthLabel">Monat</span>
+          <input id="exportMonth" type="month">
+        </label>
+        <label>
+          <span>Projektumfang</span>
+          <select id="exportScopeSelect">
+            <option value="all">Alle Projekte</option>
+            <option value="single">Ein Projekt</option>
+          </select>
+        </label>
+        <label id="exportProjectField" hidden>
+          <span>Einzelprojekt</span>
+          <select id="exportProjectSelect"></select>
+        </label>
+        <div class="dialog-actions">
+          <button id="closeExportButton" class="secondary-button" type="button">Schließen</button>
+          <button class="primary-button" type="submit">Exportieren</button>
+        </div>
+      </form>
     </div>
   </dialog>
 

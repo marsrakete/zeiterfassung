@@ -80,6 +80,12 @@ button, input, select, textarea { font: inherit; }
   margin: 0;
 }
 
+.hero-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .eyebrow, .section-kicker {
   margin: 0 0 8px;
   text-transform: uppercase;
@@ -676,6 +682,20 @@ th {
   line-height: 1.5;
 }
 
+.kofi-link {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+.kofi-link img {
+  display: block;
+  max-width: 100%;
+  width: auto;
+}
+
 .note-dialog-text {
   color: var(--muted);
   white-space: pre-wrap;
@@ -951,6 +971,14 @@ th {
   .hero-headline {
     justify-content: space-between;
     width: 100%;
+  }
+  .kofi-link {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .kofi-link img {
+    max-width: min(100%, 230px);
+    height: auto !important;
   }
   .panel, .full-width { grid-column: 1 / -1; }
   .panel { padding: 18px; }

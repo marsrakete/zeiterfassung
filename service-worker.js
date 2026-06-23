@@ -1,4 +1,4 @@
-const CACHE_PREFIX = "zeiterfassung-cache-v46";
+const CACHE_PREFIX = "zeiterfassung-cache-v47";
 const CACHE_NAME = CACHE_PREFIX;
 const ASSETS = [
   "./",
@@ -8,7 +8,8 @@ const ASSETS = [
   "./README.md",
   "./version.json",
   "./manifest.webmanifest",
-  "./icons/app-icon.svg"
+  "./icons/app-icon.svg",
+  "./icons/kofi-button.svg"
 ];
 
 self.addEventListener("install", (event) => {
