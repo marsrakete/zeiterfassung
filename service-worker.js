@@ -1,10 +1,11 @@
 const CACHE_PREFIX = "zeiterfassung-cache-";
-const CACHE_VERSION = "v52";
+const CACHE_VERSION = "v58";
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./translations.js",
   "./app.js",
   "./README.md",
   "./version.json",

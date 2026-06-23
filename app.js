@@ -1,11 +1,14 @@
 const STORAGE_KEY = "zeiterfassung-pwa-state-v1";
+const INTERNAL_BACKUPS_KEY = "zeiterfassung-pwa-state-backups-v1";
+const MAX_INTERNAL_BACKUPS = 20;
+const FILE_BACKUP_WARNING_AGE_DAYS = 7;
 const LAST_SEEN_BUILD_KEY = "zeiterfassung-last-seen-build";
 const LANGUAGE_STORAGE_KEY = "zeiterfassung-language";
 const APP_SHARE_URL = "https://marsrakete.github.io/zeiterfassung/";
 const DATA_SCHEMA_VERSION = 3;
 const APP_BUILD_INFO = Object.freeze({
-  appVersion: "1.1.18",
-  cacheVersion: "v52",
+  appVersion: "1.1.24",
+  cacheVersion: "v58",
   label: "Aktueller Stand"
 });
 const DEFAULT_VERSION_INFO = Object.freeze({
@@ -15,707 +18,7 @@ const DEFAULT_VERSION_INFO = Object.freeze({
 });
 const SUPPORTED_LANGUAGES = ["de", "en", "fr"];
 const LANGUAGE_FALLBACK = "de";
-const TRANSLATIONS = {
-  de: {
-    appTitle: "Zeiterfassung",
-    appEyebrow: "Zeiterfassung",
-    settingsOpen: "Einstellungen öffnen",
-    exportOpen: "Datenexport öffnen",
-    settingsTitle: "Daten & Export",
-    settingsDialogTitle: "Einstellungen",
-    activeStatus: "Aktiv",
-    noActiveProject: "Kein Projekt eingebucht",
-    editLive: "Live bearbeiten",
-    stop: "Stop",
-    resumeLast: "Letztes Projekt fortsetzen",
-    projectsSection: "Projekte",
-    projectsHeading: "Projektverwaltung",
-    projectSearch: "Projekt suchen",
-    projectFilterAll: "Alle",
-    projectFilterActive: "Aktiv",
-    projectFilterToday: "Heute gebucht",
-    projectFilterEmpty: "Heute ohne Buchung",
-    newProject: "Neues Projekt",
-    timesSection: "Zeiten",
-    manualHeading: "Manueller Zeitblock",
-    project: "Projekt",
-    start: "Start",
-    end: "Ende",
-    note: "Notiz",
-    optional: "Optional",
-    saveBlock: "Zeitblock speichern",
-    statsSection: "Statistik",
-    statsHeading: "Projektverteilung",
-    period: "Zeitraum",
-    chart: "Diagramm",
-    barChart: "Balkendiagramm",
-    pieChart: "Tortendiagramm",
-    calendarSection: "Kalender",
-    calendarHeading: "Kalenderansicht",
-    dailyGoal: "Soll heute",
-    weeklyGoal: "Soll Woche",
-    showCalendar: "Kalender anzeigen",
-    view: "Ansicht",
-    date: "Datum",
-    overviewSection: "Übersicht",
-    overviewHeading: "Gespeicherte Zeitblöcke",
-    sort: "Sortierung",
-    newestFirst: "Neueste zuerst",
-    oldestFirst: "Älteste zuerst",
-    projectAZ: "Projekt A-Z",
-    longestDuration: "Längste Dauer",
-    deleteAllBlocks: "Alle Blöcke löschen",
-    overviewProject: "Projekt",
-    overviewPeriod: "Zeitraum",
-    overviewDuration: "Dauer",
-    overviewEditor: "Editor",
-    helpSummary: "Hilfe & Dokumentation",
-    deleteConfirmYes: "Ja",
-    deleteConfirmNo: "Nein",
-    deleteProjectTitle: "Projekt löschen?",
-    deleteProjectConfirm: "Ja, löschen",
-    deleteProjectMessage: "Soll \"{project}\" wirklich gelöscht werden? Alle {count} gespeicherten Zeitblöcke dieses Projekts werden ebenfalls entfernt.",
-    deleteEntryTitle: "Zeitblock löschen?",
-    deleteEntryConfirm: "Ja, löschen",
-    deleteEntryMessage: "Soll der Zeitblock von \"{project}\" wirklich gelöscht werden?",
-    deleteAllEntriesTitle: "Alle Zeitblöcke löschen?",
-    deleteAllEntriesConfirm: "Ja, alle löschen",
-    deleteAllEntriesMessage: "Sollen wirklich alle {count} gespeicherten Zeitblöcke gelöscht werden?",
-    entryEditorHeading: "Zeitblock bearbeiten",
-    activeSessionHeading: "Laufenden Zeitblock bearbeiten",
-    projectCreateTitle: "Neues Projekt",
-    projectEditorTitle: "Projekt bearbeiten",
-    projectNoteTitle: "Projektnotiz",
-    close: "Schließen",
-    cancel: "Abbrechen",
-    save: "Speichern",
-    deleteBlock: "Block löschen",
-    settingsGroup: "Einstellungen",
-    dataExportGroup: "Datenexport",
-    dataStorageTitle: "Datenspeicherung",
-    dataStorageText1: "Alle Projekte und Zeitblöcke werden lokal im Browser auf diesem Gerät gespeichert.",
-    dataStorageText2: "Die Daten bleiben erhalten, bis du sie löschst, importierst oder der Browser-Speicher manuell entfernt wird.",
-    noBackup: "Noch kein App-Daten-Backup erstellt.",
-    backupFreshPrefix: "Letztes App-Daten-Backup",
-    backupOldPrefix: "Backup älter als 7 Tage",
-    importDataTitle: "Daten importieren?",
-    importDataConfirm: "Ja, zusammenführen",
-    importDataPrompt: "Sollen die Daten zusammengeführt werden?",
-    importDataContains: "Import enthält:",
-    importDataProjects: "{count} Projekte",
-    importDataBlocks: "{count} Zeitblöcke",
-    importDataRounding: "Rundung",
-    importDataMergeNotice: "Bestehende Projekte und Zeitblöcke bleiben erhalten. Dubletten werden übersprungen.",
-    rounding: "Rundung beim Ausbuchen",
-    noRounding: "Keine Rundung",
-    rounding5: "5 Minuten",
-    rounding10: "10 Minuten",
-    rounding15: "15 Minuten",
-    roundingUnit: "Minuten",
-    timerReminder: "Stundenerinnerung aktivieren",
-    dailyGoalHours: "Sollzeit pro Tag (Stunden)",
-    weeklyGoalHours: "Sollzeit pro Woche (Stunden)",
-    updateGroupTitle: "Update",
-    updateGroupDescription: "Prüfe, ob eine neue App-Version verfügbar ist, und lade sie bei Bedarf neu.",
-    checkUpdates: "Auf Update prüfen",
-    reload: "Neu laden",
-    exportFormat: "Format",
-    exportPeriod: "Zeitraum",
-    exportDay: "Tag",
-    exportWeek: "Woche",
-    exportCurrentMonth: "Aktueller Monat",
-    exportCustomMonth: "Anderer Monat",
-    exportProjectScope: "Projektumfang",
-    exportAll: "Alle",
-    exportSingle: "Ein Projekt",
-    exportSingleProject: "Einzelprojekt",
-    exportButton: "Exportieren",
-    exportExcel: "Excel",
-    exportCsv: "CSV",
-    exportHtmlReport: "HTML-Bericht",
-    appDataTitle: "App-Daten übertragen",
-    appDataGroup: "App-Daten",
-    exportAppData: "App-Daten exportieren",
-    importAppData: "App-Daten importieren",
-    deviceTransferTitle: "Gerätewechsel",
-    deviceTransferText: "Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.",
-    supportTitle: "Support",
-    supportIntro: "Wenn dir die App hilft, kannst du das Projekt auf Ko-Fi unterstützen.",
-    recommendTitle: "Weiterempfehlen",
-    recommendDescription: "Teile den Link zur Zeiterfassung direkt aus der App.",
-    recommendAppButton: "App teilen",
-    recommendScanHint: "Oder mit dem Smartphone scannen:",
-    recommendQrAlt: "QR-Code zur Zeiterfassung",
-    recommendAppText: "Schau dir die Zeiterfassung an: Projekte anlegen, Zeiten buchen und Berichte exportieren.",
-    recommendCopied: "Link zur App wurde in die Zwischenablage kopiert.",
-    recommendUnavailable: "Teilen wird in diesem Browser nicht unterstützt.",
-    exportShareTitle: "Zeiterfassung exportieren",
-    exportReportTitle: "Zeiterfassungsbericht exportieren",
-    exportDataTitle: "Zeiterfassungsdaten exportieren",
-    roundingNoticeUpdated: "Applikation wurde aktualisiert",
-    roundingNoticeStart: "Auf {minutes} Minuten gerundet, Start: {date}",
-    roundingNoticeEnd: "Auf {minutes} Minuten gerundet, Ende: {date}",
-    noProjectFound: "Keine Projekte gefunden",
-    noProjectFoundText: "Die aktuelle Suche oder der Filter liefert keine Treffer.",
-    noEntries: "Noch keine Zeitblöcke gespeichert.",
-    noChartData: "Keine Daten für den gewählten Zeitraum",
-    updateNoChange: "Keine neue Version gefunden. Diese App ist aktuell.",
-    updateCheckFailed: "Update-Prüfung nicht möglich. Bitte Internetverbindung oder Server prüfen.",
-    updateVersionIncomplete: "Die Versionsdatei vom Server ist unvollständig.",
-    updateAvailablePrefix: "Neue Version verfügbar",
-    updateAvailableAction: "Bitte jetzt neu laden.",
-    timerReminderTitle: "Es läuft noch ein Projekt-Timer",
-    timerReminderBody: "{project} läuft seit {duration}.",
-    timerReminderPermissionDenied: "Benachrichtigungen sind im Browser blockiert. Bitte erlaube sie in den Browser-Einstellungen.",
-    timerReminderPermissionUnavailable: "Systembenachrichtigungen werden auf diesem Gerät oder in diesem Browser nicht unterstützt.",
-    timerReminderPermissionNeeded: "Ohne Benachrichtigungsfreigabe kann die Stundenerinnerung nicht aktiviert werden.",
-    version: "Version",
-    offlineVersion: "Offline-Stand",
-    checkingUpdates: "Prüfe auf Updates …",
-    filter: "Filter",
-    projectFilter: "Filter",
-    filterAll: "Alle",
-    filterActive: "Aktiv",
-    filterToday: "Heute gebucht",
-    filterEmpty: "Heute ohne Buchung",
-    today: "Heute",
-    thisWeek: "Diese Woche",
-    thisMonth: "Dieser Monat",
-    day: "Tag",
-    week: "Woche",
-    month: "Monat",
-    noNote: "Keine Notiz hinterlegt",
-    noProjectYet: "Bitte zuerst ein Projekt anlegen",
-    emptyProjectsTitle: "Noch keine Projekte vorhanden",
-    emptyProjectsText: "Lege zuerst ein Projekt an, damit du Zeiten buchen und exportieren kannst.",
-    projectNoteMissing: "Keine Notiz hinterlegt",
-    projectDragHandle: "Projekt verschieben",
-    projectMoveUp: "Projekt nach oben",
-    projectMoveDown: "Projekt nach unten",
-    projectClockIn: "Einbuchen",
-    projectClockOut: "Ausbuchen",
-    projectEdit: "Bearbeiten",
-    projectDelete: "Löschen",
-    projectToday: "Heute",
-    projectNamePlaceholder: "z. B. Kunde Website Relaunch",
-    projectNotePlaceholder: "Optional",
-    unknownProject: "Unbekanntes Projekt",
-    noTimeBlocksFound: "Keine Projekte gefunden",
-    noTimeBlocksFoundText: "Die aktuelle Suche oder der Filter liefert keine Treffer.",
-    noBlocksSaved: "Noch keine Zeitblöcke gespeichert.",
-    invalidProjectName: "Der Projektname ist bereits vergeben. Bitte wähle einen eindeutigen Namen.",
-    invalidStartEnd: "Der manuelle Zeitblock braucht ein gültiges Start- und Enddatum.",
-    invalidProjectStart: "Bitte gib einen gültigen Projektwert und eine gültige Startzeit an.",
-    importInvalid: "Die ausgewählte Datei enthält keine gültigen Zeiterfassungsdaten.",
-    importInvalidFile: "Die Datei konnte nicht importiert werden. Bitte verwende eine gültige JSON-Exportdatei.",
-    overlapWarning: "Achtung: Der manuelle Zeitblock überschneidet sich mit vorhandenen Buchungen.",
-    overlapConfirm: "Trotzdem speichern?",
-    noFinishedBlocks: "Im gewählten Zeitraum wurden keine abgeschlossenen Zeitblöcke gefunden.",
-    projectBlocksTodayOne: "1 Zeitblock heute",
-    projectBlocksTodayMany: "{count} Zeitblöcke heute",
-    startsIn: "Startet in",
-    plannedFrom: "Geplant ab",
-    runningSince: "Läuft seit",
-    holiday: "Feiertag",
-    weekend: "Wochenende",
-    language: "Sprache",
-    languageAuto: "Automatisch",
-    languageGerman: "Deutsch",
-    languageEnglish: "Englisch",
-    languageFrench: "Französisch",
-    calendarTimeBlock: "Zeitblock",
-    calendarNoBlocks: "Keine Zeitblöcke an diesem Tag",
-    helpLoading: "Dokumentation wird geladen …",
-    helpLoadFailed: "Die Hilfe konnte gerade nicht geladen werden.",
-    manualConflictPrefixActive: "Laufend",
-    manualConflictPrefixBlock: "Block",
-    manualConflictMore: "… und {count} weitere Überschneidungen.",
-    manualConflictQuestion: "Trotzdem speichern?",
-    noProjectSelected: "Bitte zuerst ein Projekt anlegen",
-    invalidProjectSelection: "Bitte ein gültiges Projekt auswählen.",
-    invalidEntryDates: "Start und Ende des Blocks müssen gültig sein und Ende muss nach Start liegen.",
-    reportTitle: "Zeiterfassungsbericht",
-    reportPeriod: "Zeitraum",
-    reportProjectSummary: "Summen pro Projekt",
-    reportStatistics: "Statistik",
-    reportDayTotal: "Tagessumme",
-    reportProject: "Projekt",
-    reportStart: "Start",
-    reportEnd: "Ende",
-    reportDuration: "Dauer",
-    reportNote: "Notiz",
-    reportHours: "Stunden",
-    reportTotal: "Gesamt",
-    reportShare: "Anteil",
-    reportType: "Typ"
-  },
-  en: {
-    appTitle: "Time Tracking",
-    appEyebrow: "Time Tracking",
-    settingsOpen: "Open settings",
-    exportOpen: "Open data export",
-    settingsTitle: "Data & Export",
-    settingsDialogTitle: "Settings",
-    activeStatus: "Active",
-    noActiveProject: "No project booked",
-    editLive: "Edit live",
-    stop: "Stop",
-    resumeLast: "Resume last project",
-    projectsSection: "Projects",
-    projectsHeading: "Project Management",
-    projectSearch: "Search project",
-    projectFilterAll: "All",
-    projectFilterActive: "Active",
-    projectFilterToday: "Booked today",
-    projectFilterEmpty: "No booking today",
-    newProject: "New project",
-    timesSection: "Time",
-    manualHeading: "Manual time block",
-    project: "Project",
-    start: "Start",
-    end: "End",
-    note: "Note",
-    optional: "Optional",
-    saveBlock: "Save time block",
-    statsSection: "Statistics",
-    statsHeading: "Project distribution",
-    period: "Period",
-    chart: "Chart",
-    barChart: "Bar chart",
-    pieChart: "Pie chart",
-    calendarSection: "Calendar",
-    calendarHeading: "Calendar view",
-    dailyGoal: "Target today",
-    weeklyGoal: "Target week",
-    showCalendar: "Show calendar",
-    view: "View",
-    date: "Date",
-    overviewSection: "Overview",
-    overviewHeading: "Saved time blocks",
-    sort: "Sort",
-    newestFirst: "Newest first",
-    oldestFirst: "Oldest first",
-    projectAZ: "Project A-Z",
-    longestDuration: "Longest duration",
-    deleteAllBlocks: "Delete all blocks",
-    overviewProject: "Project",
-    overviewPeriod: "Period",
-    overviewDuration: "Duration",
-    overviewEditor: "Editor",
-    helpSummary: "Help & Documentation",
-    deleteConfirmYes: "Yes",
-    deleteConfirmNo: "No",
-    deleteProjectTitle: "Delete project?",
-    deleteProjectConfirm: "Yes, delete",
-    deleteProjectMessage: "Should \"{project}\" really be deleted? All {count} saved time blocks for this project will also be removed.",
-    deleteEntryTitle: "Delete time block?",
-    deleteEntryConfirm: "Yes, delete",
-    deleteEntryMessage: "Should the time block from \"{project}\" really be deleted?",
-    deleteAllEntriesTitle: "Delete all time blocks?",
-    deleteAllEntriesConfirm: "Yes, delete all",
-    deleteAllEntriesMessage: "Should all {count} saved time blocks really be deleted?",
-    entryEditorHeading: "Edit time block",
-    activeSessionHeading: "Edit running time block",
-    projectCreateTitle: "New project",
-    projectEditorTitle: "Edit project",
-    projectNoteTitle: "Project note",
-    close: "Close",
-    cancel: "Cancel",
-    save: "Save",
-    deleteBlock: "Delete block",
-    settingsGroup: "Settings",
-    dataExportGroup: "Data export",
-    dataStorageTitle: "Data storage",
-    dataStorageText1: "All projects and time blocks are stored locally in the browser on this device.",
-    dataStorageText2: "Data remains available until you delete it, import new data, or clear the browser storage manually.",
-    noBackup: "No app-data backup has been created yet.",
-    backupFreshPrefix: "Last app-data backup",
-    backupOldPrefix: "Backup older than 7 days",
-    importDataTitle: "Import data?",
-    importDataConfirm: "Yes, merge",
-    importDataPrompt: "Should the data be merged?",
-    importDataContains: "Import contains:",
-    importDataProjects: "{count} projects",
-    importDataBlocks: "{count} time blocks",
-    importDataRounding: "Rounding",
-    importDataMergeNotice: "Existing projects and time blocks will be kept. Duplicate entries will be skipped.",
-    rounding: "Rounding on stop",
-    noRounding: "No rounding",
-    rounding5: "5 minutes",
-    rounding10: "10 minutes",
-    rounding15: "15 minutes",
-    roundingUnit: "minutes",
-    timerReminder: "Enable hourly reminder",
-    dailyGoalHours: "Daily target hours",
-    weeklyGoalHours: "Weekly target hours",
-    updateGroupTitle: "Update",
-    updateGroupDescription: "Check whether a new app version is available and reload it if needed.",
-    checkUpdates: "Check for updates",
-    reload: "Reload",
-    exportFormat: "Format",
-    exportPeriod: "Period",
-    exportDay: "Day",
-    exportWeek: "Week",
-    exportCurrentMonth: "Current month",
-    exportCustomMonth: "Other month",
-    exportProjectScope: "Project scope",
-    exportAll: "All",
-    exportSingle: "Single project",
-    exportSingleProject: "Single project",
-    exportButton: "Export",
-    exportExcel: "Excel",
-    exportCsv: "CSV",
-    exportHtmlReport: "HTML report",
-    appDataTitle: "Transfer app data",
-    appDataGroup: "App data",
-    exportAppData: "Export app data",
-    importAppData: "Import app data",
-    deviceTransferTitle: "Device switch",
-    deviceTransferText: "Export your app data as a JSON file and import it again on the other device.",
-    supportTitle: "Support",
-    supportIntro: "If the app helps you, you can support the project on Ko-Fi.",
-    recommendTitle: "Recommend",
-    recommendDescription: "Share the time tracking app link directly from the app.",
-    recommendAppButton: "Share app",
-    recommendScanHint: "Or scan it with your phone:",
-    recommendQrAlt: "QR code for the time tracking app",
-    recommendAppText: "Take a look at this time tracking app: create projects, track time, and export reports.",
-    recommendCopied: "The app link was copied to the clipboard.",
-    recommendUnavailable: "Sharing is not supported in this browser.",
-    exportShareTitle: "Export time tracking",
-    exportReportTitle: "Export time tracking report",
-    exportDataTitle: "Export time tracking data",
-    roundingNoticeUpdated: "Application has been updated",
-    roundingNoticeStart: "Rounded to {minutes} minutes, start: {date}",
-    roundingNoticeEnd: "Rounded to {minutes} minutes, end: {date}",
-    noProjectFound: "No projects found",
-    noProjectFoundText: "The current search or filter returned no results.",
-    noEntries: "No time blocks saved yet.",
-    noChartData: "No data for the selected period",
-    updateNoChange: "No new version found. This app is up to date.",
-    updateCheckFailed: "Update check not possible. Please check your internet connection or server.",
-    updateVersionIncomplete: "The server version file is incomplete.",
-    updateAvailablePrefix: "New version available",
-    updateAvailableAction: "Please reload now.",
-    timerReminderTitle: "A project timer is still running",
-    timerReminderBody: "{project} has been running for {duration}.",
-    timerReminderPermissionDenied: "Notifications are blocked in the browser. Please allow them in browser settings.",
-    timerReminderPermissionUnavailable: "System notifications are not supported on this device or browser.",
-    timerReminderPermissionNeeded: "Without notification permission, the hourly reminder cannot be enabled.",
-    version: "Version",
-    offlineVersion: "Offline stand",
-    checkingUpdates: "Checking for updates …",
-    filter: "Filter",
-    projectFilter: "Filter",
-    filterAll: "All",
-    filterActive: "Active",
-    filterToday: "Booked today",
-    filterEmpty: "No booking today",
-    today: "Today",
-    thisWeek: "This week",
-    thisMonth: "This month",
-    day: "Day",
-    week: "Week",
-    month: "Month",
-    noNote: "No note set",
-    noProjectYet: "Please create a project first",
-    emptyProjectsTitle: "No projects yet",
-    emptyProjectsText: "Create a project first so you can book and export time.",
-    projectNoteMissing: "No note available",
-    projectDragHandle: "Move project",
-    projectMoveUp: "Move project up",
-    projectMoveDown: "Move project down",
-    projectClockIn: "Book in",
-    projectClockOut: "Book out",
-    projectEdit: "Edit",
-    projectDelete: "Delete",
-    projectToday: "Today",
-    projectNamePlaceholder: "e.g. Client website relaunch",
-    projectNotePlaceholder: "Optional",
-    unknownProject: "Unknown project",
-    noTimeBlocksFound: "No projects found",
-    noTimeBlocksFoundText: "The current search or filter returned no results.",
-    noBlocksSaved: "No time blocks saved yet.",
-    invalidProjectName: "The project name is already taken. Please choose a unique name.",
-    invalidStartEnd: "The manual time block needs valid start and end dates.",
-    invalidProjectStart: "Please choose a valid project and a valid start time.",
-    importInvalid: "The selected file does not contain valid time tracking data.",
-    importInvalidFile: "The file could not be imported. Please use a valid JSON export file.",
-    overlapWarning: "Warning: The manual time block overlaps with existing bookings.",
-    overlapConfirm: "Save anyway?",
-    noFinishedBlocks: "No completed time blocks were found in the selected period.",
-    projectBlocksTodayOne: "1 time block today",
-    projectBlocksTodayMany: "{count} time blocks today",
-    startsIn: "Starts in",
-    plannedFrom: "Planned from",
-    runningSince: "Running since",
-    holiday: "Holiday",
-    weekend: "Weekend",
-    language: "Language",
-    languageAuto: "Automatic",
-    languageGerman: "German",
-    languageEnglish: "English",
-    languageFrench: "French",
-    calendarTimeBlock: "Time block",
-    calendarNoBlocks: "No time blocks on this day",
-    helpLoading: "Loading documentation …",
-    helpLoadFailed: "Help could not be loaded right now.",
-    manualConflictPrefixActive: "Running",
-    manualConflictPrefixBlock: "Block",
-    manualConflictMore: "… and {count} more overlaps.",
-    manualConflictQuestion: "Save anyway?",
-    noProjectSelected: "Please create a project first",
-    invalidProjectSelection: "Please choose a valid project.",
-    invalidEntryDates: "The block start and end must be valid and end must be after start.",
-    reportTitle: "Time tracking report",
-    reportPeriod: "Period",
-    reportProjectSummary: "Totals per project",
-    reportStatistics: "Statistics",
-    reportDayTotal: "Day total",
-    reportProject: "Project",
-    reportStart: "Start",
-    reportEnd: "End",
-    reportDuration: "Duration",
-    reportNote: "Note",
-    reportHours: "Hours",
-    reportTotal: "Total",
-    reportShare: "Share",
-    reportType: "Type"
-  },
-  fr: {
-    appTitle: "Suivi du temps",
-    appEyebrow: "Suivi du temps",
-    settingsOpen: "Ouvrir les paramètres",
-    exportOpen: "Ouvrir l'export des données",
-    settingsTitle: "Données et export",
-    settingsDialogTitle: "Paramètres",
-    activeStatus: "Actif",
-    noActiveProject: "Aucun projet sélectionné",
-    editLive: "Modifier en direct",
-    stop: "Stop",
-    resumeLast: "Reprendre le dernier projet",
-    projectsSection: "Projets",
-    projectsHeading: "Gestion des projets",
-    projectSearch: "Rechercher un projet",
-    projectFilterAll: "Tous",
-    projectFilterActive: "Actifs",
-    projectFilterToday: "Enregistrés aujourd'hui",
-    projectFilterEmpty: "Aucune saisie aujourd'hui",
-    newProject: "Nouveau projet",
-    timesSection: "Temps",
-    manualHeading: "Bloc de temps manuel",
-    project: "Projet",
-    start: "Début",
-    end: "Fin",
-    note: "Note",
-    optional: "Facultatif",
-    saveBlock: "Enregistrer le bloc",
-    statsSection: "Statistiques",
-    statsHeading: "Répartition des projets",
-    period: "Période",
-    chart: "Graphique",
-    barChart: "Histogramme",
-    pieChart: "Diagramme circulaire",
-    calendarSection: "Calendrier",
-    calendarHeading: "Vue calendrier",
-    dailyGoal: "Objectif du jour",
-    weeklyGoal: "Objectif de la semaine",
-    showCalendar: "Afficher le calendrier",
-    view: "Vue",
-    date: "Date",
-    overviewSection: "Aperçu",
-    overviewHeading: "Blocs de temps enregistrés",
-    sort: "Tri",
-    newestFirst: "Les plus récents",
-    oldestFirst: "Les plus anciens",
-    projectAZ: "Projet A-Z",
-    longestDuration: "Durée la plus longue",
-    deleteAllBlocks: "Supprimer tous les blocs",
-    overviewProject: "Projet",
-    overviewPeriod: "Période",
-    overviewDuration: "Durée",
-    overviewEditor: "Éditeur",
-    helpSummary: "Aide et documentation",
-    deleteConfirmYes: "Oui",
-    deleteConfirmNo: "Non",
-    deleteProjectTitle: "Supprimer le projet ?",
-    deleteProjectConfirm: "Oui, supprimer",
-    deleteProjectMessage: "Voulez-vous vraiment supprimer \"{project}\" ? Tous les {count} blocs de temps enregistrés pour ce projet seront aussi supprimés.",
-    deleteEntryTitle: "Supprimer le bloc de temps ?",
-    deleteEntryConfirm: "Oui, supprimer",
-    deleteEntryMessage: "Voulez-vous vraiment supprimer le bloc de temps de \"{project}\" ?",
-    deleteAllEntriesTitle: "Supprimer tous les blocs de temps ?",
-    deleteAllEntriesConfirm: "Oui, tout supprimer",
-    deleteAllEntriesMessage: "Voulez-vous vraiment supprimer les {count} blocs de temps enregistrés ?",
-    entryEditorHeading: "Modifier le bloc",
-    activeSessionHeading: "Modifier le bloc en cours",
-    projectCreateTitle: "Nouveau projet",
-    projectEditorTitle: "Modifier le projet",
-    projectNoteTitle: "Note du projet",
-    close: "Fermer",
-    cancel: "Annuler",
-    save: "Enregistrer",
-    deleteBlock: "Supprimer le bloc",
-    settingsGroup: "Paramètres",
-    dataExportGroup: "Export des données",
-    dataStorageTitle: "Stockage des données",
-    dataStorageText1: "Tous les projets et blocs de temps sont stockés localement dans le navigateur sur cet appareil.",
-    dataStorageText2: "Les données restent disponibles jusqu'à suppression, importation ou effacement manuel du stockage du navigateur.",
-    noBackup: "Aucune sauvegarde des données de l'application n'a encore été créée.",
-    backupFreshPrefix: "Dernière sauvegarde des données",
-    backupOldPrefix: "Sauvegarde de plus de 7 jours",
-    importDataTitle: "Importer les données ?",
-    importDataConfirm: "Oui, fusionner",
-    importDataPrompt: "Voulez-vous fusionner les données ?",
-    importDataContains: "L'import contient :",
-    importDataProjects: "{count} projets",
-    importDataBlocks: "{count} blocs de temps",
-    importDataRounding: "Arrondi",
-    importDataMergeNotice: "Les projets et blocs de temps existants seront conservés. Les doublons seront ignorés.",
-    rounding: "Arrondi à l'arrêt",
-    noRounding: "Aucun arrondi",
-    rounding5: "5 minutes",
-    rounding10: "10 minutes",
-    rounding15: "15 minutes",
-    roundingUnit: "minutes",
-    timerReminder: "Activer le rappel horaire",
-    dailyGoalHours: "Heures cibles par jour",
-    weeklyGoalHours: "Heures cibles par semaine",
-    updateGroupTitle: "Mise à jour",
-    updateGroupDescription: "Vérifiez si une nouvelle version de l'application est disponible et rechargez-la si nécessaire.",
-    checkUpdates: "Vérifier les mises à jour",
-    reload: "Recharger",
-    exportFormat: "Format",
-    exportPeriod: "Période",
-    exportDay: "Jour",
-    exportWeek: "Semaine",
-    exportCurrentMonth: "Mois en cours",
-    exportCustomMonth: "Autre mois",
-    exportProjectScope: "Périmètre du projet",
-    exportAll: "Tous",
-    exportSingle: "Un projet",
-    exportSingleProject: "Projet unique",
-    exportButton: "Exporter",
-    exportExcel: "Excel",
-    exportCsv: "CSV",
-    exportHtmlReport: "Rapport HTML",
-    appDataTitle: "Transférer les données de l'application",
-    appDataGroup: "Données de l'application",
-    exportAppData: "Exporter les données",
-    importAppData: "Importer les données",
-    deviceTransferTitle: "Changement d'appareil",
-    deviceTransferText: "Exportez vos données d'application en tant que fichier JSON et importez-les à nouveau sur l'autre appareil.",
-    supportTitle: "Soutien",
-    supportIntro: "Si l'application vous aide, vous pouvez soutenir le projet sur Ko-Fi.",
-    recommendTitle: "Recommander",
-    recommendDescription: "Partagez le lien de l'application de suivi du temps directement depuis l'application.",
-    recommendAppButton: "Partager l'app",
-    recommendScanHint: "Ou scannez avec votre téléphone :",
-    recommendQrAlt: "Code QR vers l'application de suivi du temps",
-    recommendAppText: "Découvrez cette application de suivi du temps : créez des projets, saisissez le temps et exportez des rapports.",
-    recommendCopied: "Le lien de l'application a été copié dans le presse-papiers.",
-    recommendUnavailable: "Le partage n'est pas pris en charge dans ce navigateur.",
-    exportShareTitle: "Exporter le suivi du temps",
-    exportReportTitle: "Exporter le rapport de suivi du temps",
-    exportDataTitle: "Exporter les données de suivi du temps",
-    roundingNoticeUpdated: "L'application a été mise à jour",
-    roundingNoticeStart: "Arrondi à {minutes} minutes, début : {date}",
-    roundingNoticeEnd: "Arrondi à {minutes} minutes, fin : {date}",
-    noProjectFound: "Aucun projet trouvé",
-    noProjectFoundText: "La recherche ou le filtre actuel ne renvoie aucun résultat.",
-    noEntries: "Aucun bloc de temps enregistré pour le moment.",
-    noChartData: "Aucune donnée pour la période sélectionnée",
-    updateNoChange: "Aucune nouvelle version trouvée. L'application est à jour.",
-    updateCheckFailed: "Impossible de vérifier les mises à jour. Vérifiez votre connexion ou le serveur.",
-    updateVersionIncomplete: "Le fichier de version du serveur est incomplet.",
-    updateAvailablePrefix: "Nouvelle version disponible",
-    updateAvailableAction: "Veuillez recharger maintenant.",
-    timerReminderTitle: "Un minuteur de projet tourne encore",
-    timerReminderBody: "{project} fonctionne depuis {duration}.",
-    timerReminderPermissionDenied: "Les notifications sont bloquées dans le navigateur. Autorisez-les dans les paramètres du navigateur.",
-    timerReminderPermissionUnavailable: "Les notifications système ne sont pas prises en charge sur cet appareil ou navigateur.",
-    timerReminderPermissionNeeded: "Sans autorisation de notification, le rappel horaire ne peut pas être activé.",
-    version: "Version",
-    offlineVersion: "Version hors ligne",
-    checkingUpdates: "Recherche des mises à jour …",
-    filter: "Filtre",
-    projectFilter: "Filtre",
-    filterAll: "Tous",
-    filterActive: "Actifs",
-    filterToday: "Enregistrés aujourd'hui",
-    filterEmpty: "Aucune saisie aujourd'hui",
-    today: "Aujourd'hui",
-    thisWeek: "Cette semaine",
-    thisMonth: "Ce mois-ci",
-    day: "Jour",
-    week: "Semaine",
-    month: "Mois",
-    noNote: "Aucune note",
-    noProjectYet: "Veuillez d'abord créer un projet",
-    emptyProjectsTitle: "Aucun projet pour le moment",
-    emptyProjectsText: "Créez d'abord un projet pour pouvoir enregistrer et exporter du temps.",
-    projectNoteMissing: "Aucune note",
-    projectDragHandle: "Déplacer le projet",
-    projectMoveUp: "Déplacer le projet vers le haut",
-    projectMoveDown: "Déplacer le projet vers le bas",
-    projectClockIn: "Entrer",
-    projectClockOut: "Sortir",
-    projectEdit: "Modifier",
-    projectDelete: "Supprimer",
-    projectToday: "Aujourd'hui",
-    projectNamePlaceholder: "p. ex. refonte du site client",
-    projectNotePlaceholder: "Facultatif",
-    unknownProject: "Projet inconnu",
-    noTimeBlocksFound: "Aucun projet trouvé",
-    noTimeBlocksFoundText: "La recherche ou le filtre actuel ne renvoie aucun résultat.",
-    noBlocksSaved: "Aucun bloc de temps enregistré pour le moment.",
-    invalidProjectName: "Le nom du projet est déjà utilisé. Veuillez choisir un nom unique.",
-    invalidStartEnd: "Le bloc de temps manuel nécessite des dates de début et de fin valides.",
-    invalidProjectStart: "Veuillez choisir un projet valide et une heure de début valide.",
-    importInvalid: "Le fichier sélectionné ne contient pas de données de suivi valides.",
-    importInvalidFile: "Le fichier n'a pas pu être importé. Veuillez utiliser un fichier JSON valide.",
-    overlapWarning: "Attention : le bloc de temps manuel chevauche des saisies existantes.",
-    overlapConfirm: "Enregistrer quand même ?",
-    noFinishedBlocks: "Aucun bloc de temps terminé n'a été trouvé pour la période sélectionnée.",
-    projectBlocksTodayOne: "1 bloc aujourd'hui",
-    projectBlocksTodayMany: "{count} blocs aujourd'hui",
-    startsIn: "Démarre dans",
-    plannedFrom: "Prévu à partir de",
-    runningSince: "En cours depuis",
-    holiday: "Jour férié",
-    weekend: "Week-end",
-    language: "Langue",
-    languageAuto: "Automatique",
-    languageGerman: "Allemand",
-    languageEnglish: "Anglais",
-    languageFrench: "Français",
-    calendarTimeBlock: "Bloc de temps",
-    calendarNoBlocks: "Aucun bloc de temps ce jour-là",
-    helpLoading: "Chargement de la documentation …",
-    helpLoadFailed: "L'aide n'a pas pu être chargée pour le moment.",
-    manualConflictPrefixActive: "En cours",
-    manualConflictPrefixBlock: "Bloc",
-    manualConflictMore: "… et {count} autres chevauchements.",
-    manualConflictQuestion: "Enregistrer quand même ?",
-    noProjectSelected: "Veuillez d'abord créer un projet",
-    invalidProjectSelection: "Veuillez choisir un projet valide.",
-    invalidEntryDates: "Le début et la fin du bloc doivent être valides et la fin doit être après le début.",
-    reportTitle: "Rapport de suivi du temps",
-    reportPeriod: "Période",
-    reportProjectSummary: "Totaux par projet",
-    reportStatistics: "Statistiques",
-    reportDayTotal: "Total du jour",
-    reportProject: "Projet",
-    reportStart: "Début",
-    reportEnd: "Fin",
-    reportDuration: "Durée",
-    reportNote: "Note",
-    reportHours: "Heures",
-    reportTotal: "Total",
-    reportShare: "Part",
-    reportType: "Type"
-  }
-};
+const TRANSLATIONS = window.ZEITERFASSUNG_TRANSLATIONS || {};
 const PROJECT_COLOR_PALETTE = [
   "#011a27",
   "#4cb5f5",
@@ -735,8 +38,6 @@ const PROJECT_COLOR_PALETTE = [
   "#ff2b94"
 ];
 
-const state = loadState();
-
 let pendingConfirmation = null;
 let editingEntryId = null;
 let editingProjectId = null;
@@ -744,7 +45,9 @@ let roundingNoticeTimeoutId = null;
 let touchDragProjectId = null;
 let touchDragTargetId = null;
 let serviceWorkerRegistration = null;
+let fileBackupNoticeShown = false;
 let versionInfo = { ...APP_BUILD_INFO };
+const state = loadState();
 
 const elements = {
   settingsButton: document.querySelector("#settingsButton"),
@@ -800,6 +103,7 @@ const elements = {
   confirmDialog: document.querySelector("#confirmDialog"),
   confirmDialogTitle: document.querySelector("#confirmDialogTitle"),
   confirmDialogText: document.querySelector("#confirmDialogText"),
+  confirmAlternateButton: document.querySelector("#confirmAlternateButton"),
   confirmYesButton: document.querySelector("#confirmYesButton"),
   entryEditorDialog: document.querySelector("#entryEditorDialog"),
   entryEditorForm: document.querySelector("#entryEditorForm"),
@@ -861,6 +165,8 @@ renderVersionLabel();
 applyTranslations();
 bindEvents();
 render();
+maybeOfferInternalBackupRestore();
+maybeShowFileBackupNotice();
 startTicker();
 registerServiceWorker();
 loadVersionInfo({ showUpdateNotice: true });
@@ -899,7 +205,120 @@ function createInitialState() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const previousRaw = localStorage.getItem(STORAGE_KEY);
+  storeInternalBackup(previousRaw);
+
+  const nextRaw = JSON.stringify(state);
+  localStorage.setItem(STORAGE_KEY, nextRaw);
+  storeInternalBackup(nextRaw);
+}
+
+function loadInternalBackups() {
+  try {
+    const raw = localStorage.getItem(INTERNAL_BACKUPS_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((backup) => backup?.state) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveInternalBackups(backups) {
+  try {
+    localStorage.setItem(INTERNAL_BACKUPS_KEY, JSON.stringify(backups.slice(0, MAX_INTERNAL_BACKUPS)));
+  } catch {
+    try {
+      localStorage.setItem(INTERNAL_BACKUPS_KEY, JSON.stringify(backups.slice(0, Math.floor(MAX_INTERNAL_BACKUPS / 2))));
+    } catch {
+      // Interne Backups sind ein Sicherheitsnetz; die Hauptspeicherung darf daran nicht scheitern.
+    }
+  }
+}
+
+function storeInternalBackup(rawState) {
+  if (!rawState) {
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(rawState);
+    const normalized = normalizeState(parsed);
+    if (!hasRecoverableData(normalized)) {
+      return;
+    }
+
+    const backups = loadInternalBackups();
+    const fingerprint = createStateBackupFingerprint(normalized);
+    if (backups.some((backup) => backup.fingerprint === fingerprint)) {
+      return;
+    }
+
+    backups.unshift({
+      id: createId(),
+      createdAt: new Date().toISOString(),
+      fingerprint,
+      projectCount: normalized.projects.length,
+      entryCount: normalized.entries.length,
+      hasActiveSession: Boolean(normalized.activeSession),
+      state: normalized
+    });
+    saveInternalBackups(backups);
+  } catch {
+    // Ungültige oder ältere Zwischenstände werden ignoriert.
+  }
+}
+
+function hasRecoverableData(candidate) {
+  return Boolean(candidate?.projects?.length || candidate?.entries?.length || candidate?.activeSession);
+}
+
+function createStateBackupFingerprint(candidate) {
+  return JSON.stringify({
+    projects: candidate.projects,
+    entries: candidate.entries,
+    activeSession: candidate.activeSession,
+    lastStoppedSession: candidate.lastStoppedSession,
+    settings: candidate.settings
+  });
+}
+
+function getBestInternalBackup() {
+  return loadInternalBackups()
+    .map((backup) => ({
+      ...backup,
+      state: normalizeState(backup.state)
+    }))
+    .filter((backup) => hasRecoverableData(backup.state))
+    .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))[0] || null;
+}
+
+function maybeOfferInternalBackupRestore() {
+  if (hasRecoverableData(state)) {
+    return;
+  }
+
+  const backup = getBestInternalBackup();
+  if (!backup) {
+    return;
+  }
+
+  openConfirmation({
+    title: t("restoreBackupTitle"),
+    message: t("restoreBackupMessage", {
+      date: formatDateTime(backup.createdAt),
+      projects: backup.projectCount,
+      entries: backup.entryCount
+    }),
+    confirmLabel: t("restoreBackupConfirm"),
+    onConfirm: () => {
+      replaceState(backup.state);
+      render();
+    }
+  });
 }
 
 function replaceState(nextState) {
@@ -1353,9 +772,12 @@ function applyTranslations() {
   setText("#updateGroupTitle", t("updateGroupTitle"));
   setText("#updateGroupDescription", t("updateGroupDescription"));
   setText("#settingsGroupTitle", t("settingsGroup"));
-  setText("#appDataTitle", t("appDataGroup"));
+  setText("#backupGroupTitle", t("backupGroupTitle"));
+  setText("#backupGroupText", t("backupGroupText"));
   setText("#deviceTransferTitle", t("deviceTransferTitle"));
   setText("#deviceTransferText", t("deviceTransferText"));
+  setText("#exportDataButton", t("exportAppData"));
+  setText("#importDataButton", t("importAppData"));
   setText("#supportTitle", t("supportTitle"));
   setText("#supportIntro", t("supportIntro"));
   setText("#recommendTitle", t("recommendTitle"));
@@ -1814,6 +1236,7 @@ function render() {
   elements.editActiveSessionButton.disabled = !hasActiveSession;
   elements.pauseActiveSessionButton.disabled = !hasActiveSession;
   elements.resumeLastProjectButton.disabled = hasActiveSession || !hasResumableProject;
+  maybeShowFileBackupNotice();
 }
 
 function renderProjects() {
@@ -1847,7 +1270,7 @@ function renderProjects() {
     const notePreview = project.note
       ? `<button class="project-note-preview" type="button" data-project-note="${project.id}">${escapeHtml(project.note)}</button>`
       : `<span class="project-note-preview">${escapeHtml(t("projectNoteMissing"))}</span>`;
-    const todayLabel = projectEntries.length === 1 ? t("projectTodayBlocksOne") : t("projectTodayBlocksMany", { count: projectEntries.length });
+    const todayLabel = projectEntries.length === 1 ? t("projectBlocksTodayOne") : t("projectBlocksTodayMany", { count: projectEntries.length });
     const activityLabel = active
       ? (pendingStart > 0
         ? `${t("plannedFrom")} ${formatDateTime(state.activeSession.start)}`
@@ -1945,19 +1368,19 @@ function renderEntries() {
     const row = document.createElement("tr");
     row.dataset.entryId = entry.id;
     row.innerHTML = `
-      <td>
+      <td data-label="${escapeAttribute(t("overviewProject"))}">
         <span class="project-inline-label">
           <span class="project-color-dot" style="background:${color}"></span>
           <span>${escapeHtml(project?.name || t("unknownProject"))}</span>
         </span>
       </td>
-      <td>
+      <td data-label="${escapeAttribute(t("overviewPeriod"))}">
         <div>${escapeHtml(formatDateTime(entry.start))}</div>
         <div>${escapeHtml(formatDateTime(entry.end))}</div>
       </td>
-      <td>${formatDuration(getDurationMs(entry))}</td>
-      <td>${escapeHtml(entry.note || "—")}</td>
-      <td><button class="secondary-button" type="button" data-entry-action="edit" data-entry-id="${entry.id}">${escapeHtml(t("overviewEditor"))}</button></td>
+      <td data-label="${escapeAttribute(t("overviewDuration"))}">${formatDuration(getDurationMs(entry))}</td>
+      <td data-label="${escapeAttribute(t("note"))}">${escapeHtml(entry.note || "-")}</td>
+      <td class="entry-action-cell"><button class="secondary-button entry-edit-button" type="button" data-entry-action="edit" data-entry-id="${entry.id}">${escapeHtml(t("overviewEditor"))}</button></td>
     `;
     elements.entriesTableBody.appendChild(row);
   }
@@ -2567,14 +1990,23 @@ function promptDeleteProject(projectId) {
 }
 
 function handleDeleteDialogClose() {
-  if (elements.confirmDialog.returnValue !== "confirm" || !pendingConfirmation) {
+  if (!pendingConfirmation) {
     pendingConfirmation = null;
     return;
   }
 
-  const { onConfirm } = pendingConfirmation;
+  const returnValue = elements.confirmDialog.returnValue;
+  const { onConfirm, onAlternate } = pendingConfirmation;
   pendingConfirmation = null;
-  onConfirm();
+
+  if (returnValue === "confirm") {
+    onConfirm?.();
+    return;
+  }
+
+  if (returnValue === "alternate") {
+    onAlternate?.();
+  }
 }
 
 function openEntryEditor(entryId) {
@@ -2678,19 +2110,22 @@ async function exportAppData() {
       projects: state.projects,
       entries: state.entries,
       activeSession: state.activeSession,
+      lastStoppedSession: state.lastStoppedSession,
       settings: state.settings
     }
   };
 
   const file = new File(
     [JSON.stringify(payload, null, 2)],
-    `zeiterfassung-daten-${toDateInputValue(new Date())}.json`,
+    `zeiterfassung-backup-${toDateInputValue(new Date())}.json`,
     { type: "application/json" }
   );
 
   await shareOrDownloadFile(file, file.name, t("exportDataTitle"));
   state.settings.lastDataExportAt = new Date().toISOString();
+  fileBackupNoticeShown = false;
   saveState();
+  hideRoundingNotice();
   renderBackupStatus();
 }
 
@@ -2716,8 +2151,17 @@ async function handleImportData(event) {
       title: t("importDataTitle"),
       message: buildImportPreviewMessage(importedState),
       confirmLabel: t("importDataConfirm"),
+      confirmButtonClass: "primary-button",
+      alternateLabel: t("importDataReplaceConfirm"),
+      alternateButtonClass: "danger-button",
       onConfirm: () => {
         mergeImportedData(importedState);
+        elements.settingsDialog.close();
+        applyManualTimeSuggestions();
+        render();
+      },
+      onAlternate: () => {
+        replaceStateFromImport(importedState);
         elements.settingsDialog.close();
         applyManualTimeSuggestions();
         render();
@@ -2795,11 +2239,24 @@ function promptDeleteAllEntries() {
   });
 }
 
-function openConfirmation({ title, message, confirmLabel, onConfirm }) {
-  pendingConfirmation = { onConfirm };
+function openConfirmation({
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  alternateLabel = "",
+  onAlternate = null,
+  confirmButtonClass = "danger-button",
+  alternateButtonClass = "secondary-button"
+}) {
+  pendingConfirmation = { onConfirm, onAlternate };
   elements.confirmDialogTitle.textContent = title;
   elements.confirmDialogText.textContent = message;
   elements.confirmYesButton.textContent = confirmLabel;
+  elements.confirmYesButton.className = confirmButtonClass;
+  elements.confirmAlternateButton.textContent = alternateLabel;
+  elements.confirmAlternateButton.className = alternateButtonClass;
+  elements.confirmAlternateButton.hidden = !(alternateLabel && onAlternate);
   elements.confirmDialog.showModal();
 }
 
@@ -2912,17 +2369,55 @@ function supportsNotificationApi() {
 }
 
 function renderBackupStatus() {
-  const lastExport = state.settings?.lastDataExportAt;
+  const backupStatus = getFileBackupStatus();
+  const internalBackupCount = loadInternalBackups().length;
+  const internalBackupText = internalBackupCount
+    ? t("internalBackupAvailable", { count: internalBackupCount })
+    : t("internalBackupMissing");
 
-  if (!lastExport) {
-    elements.backupStatusText.textContent = t("noBackup");
+  if (!backupStatus.lastExport) {
+    elements.backupStatusText.textContent = `${t("noBackup")} ${internalBackupText}`;
     return;
   }
 
+  const prefix = backupStatus.isOld ? t("backupOldPrefix") : t("backupFreshPrefix");
+  elements.backupStatusText.textContent = `${prefix}: ${formatDateTime(backupStatus.lastExport)}. ${internalBackupText}`;
+}
+
+function getFileBackupStatus() {
+  const lastExport = state.settings?.lastDataExportAt || null;
+  if (!lastExport) {
+    return { lastExport: null, ageDays: null, isMissing: true, isOld: false };
+  }
+
   const exportDate = new Date(lastExport);
-  const ageDays = Math.floor((Date.now() - exportDate.getTime()) / 86400000);
-  const prefix = ageDays > 7 ? t("backupOldPrefix") : t("backupFreshPrefix");
-  elements.backupStatusText.textContent = `${prefix}: ${formatDateTime(lastExport)}`;
+  const ageDays = Number.isNaN(exportDate.getTime())
+    ? Number.POSITIVE_INFINITY
+    : Math.floor((Date.now() - exportDate.getTime()) / 86400000);
+
+  return {
+    lastExport,
+    ageDays,
+    isMissing: false,
+    isOld: ageDays > FILE_BACKUP_WARNING_AGE_DAYS
+  };
+}
+
+function maybeShowFileBackupNotice() {
+  if (fileBackupNoticeShown || !hasRecoverableData(state)) {
+    return;
+  }
+
+  const backupStatus = getFileBackupStatus();
+  if (!backupStatus.isMissing && !backupStatus.isOld) {
+    return;
+  }
+
+  fileBackupNoticeShown = true;
+  const message = backupStatus.isMissing
+    ? t("backupNoticeMissing")
+    : t("backupNoticeOld", { days: backupStatus.ageDays });
+  showRoundingNotice(message);
 }
 
 function renderExportProjectOptions() {
@@ -3134,15 +2629,25 @@ function renderPieChart(data) {
   data.forEach((item) => {
     const angle = (item.durationMs / total) * Math.PI * 2;
     const endAngle = startAngle + angle;
-    const path = createSvgElement("path", {
-      d: describeArc(cx, cy, radius, startAngle, endAngle),
+    const sliceAttributes = {
       fill: item.color,
       stroke: "#fffaf3",
       "stroke-width": 2,
       "data-tooltip": `${item.name}\n${formatDuration(item.durationMs)}`
-    });
-    attachTooltip(path);
-    elements.statsChart.appendChild(path);
+    };
+    const slice = isFullCircleAngle(angle)
+      ? createSvgElement("circle", {
+          cx,
+          cy,
+          r: radius,
+          ...sliceAttributes
+        })
+      : createSvgElement("path", {
+          d: describeArc(cx, cy, radius, startAngle, endAngle),
+          ...sliceAttributes
+        });
+    attachTooltip(slice);
+    elements.statsChart.appendChild(slice);
     startAngle = endAngle;
   });
 
@@ -3164,7 +2669,7 @@ function renderPieChart(data) {
     fill: "#6b5c4d",
     "font-size": 13
   });
-  subText.textContent = "Gesamt";
+  subText.textContent = t("reportTotal");
   elements.statsChart.appendChild(subText);
 }
 
@@ -3219,9 +2724,12 @@ function createChartSvgMarkup(data, type) {
       const endAngle = startAngle + angle;
       const path = describeArc(220, 160, 110, startAngle, endAngle);
       startAngle = endAngle;
+      if (isFullCircleAngle(angle)) {
+        return `<circle cx="220" cy="160" r="110" fill="${item.color}" stroke="#fffaf3" stroke-width="2"></circle>`;
+      }
       return `<path d="${path}" fill="${item.color}" stroke="#fffaf3" stroke-width="2"></path>`;
     }).join("");
-    return `<svg viewBox="0 0 640 320" width="100%" height="auto">${paths}<text x="220" y="156" text-anchor="middle" fill="#2d2218" font-size="22" font-weight="700">${formatDuration(total)}</text><text x="220" y="180" text-anchor="middle" fill="#6b5c4d" font-size="13">Gesamt</text></svg>`;
+    return `<svg viewBox="0 0 640 320" width="100%" height="auto">${paths}<text x="220" y="156" text-anchor="middle" fill="#2d2218" font-size="22" font-weight="700">${formatDuration(total)}</text><text x="220" y="180" text-anchor="middle" fill="#6b5c4d" font-size="13">${escapeXml(t("reportTotal"))}</text></svg>`;
   }
 
   const width = 640;
@@ -3529,6 +3037,10 @@ function describeArc(cx, cy, radius, startAngle, endAngle) {
   ].join(" ");
 }
 
+function isFullCircleAngle(angle) {
+  return Math.abs(angle - Math.PI * 2) < 0.000001;
+}
+
 function polarToCartesian(cx, cy, radius, angle) {
   return {
     x: cx + radius * Math.cos(angle),
@@ -3713,6 +3225,17 @@ function mergeImportedData(importedState) {
   };
 
   saveState();
+}
+
+function replaceStateFromImport(importedState) {
+  const normalizedImport = normalizeState(importedState);
+  replaceState({
+    ...normalizedImport,
+    settings: {
+      ...normalizedImport.settings,
+      lastDataExportAt: state.settings.lastDataExportAt
+    }
+  });
 }
 
 function createEntryFingerprint(entry) {

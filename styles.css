@@ -563,6 +563,10 @@ th {
   color: var(--muted);
 }
 
+.entry-edit-button {
+  white-space: nowrap;
+}
+
 .empty-state {
   border: 1px dashed rgba(103, 74, 33, 0.2);
   border-radius: 18px;
@@ -1085,6 +1089,67 @@ th {
   }
   .chart-legend {
     grid-template-columns: 1fr;
+  }
+  .table-wrapper {
+    overflow-x: visible;
+  }
+  .table-wrapper table,
+  .table-wrapper thead,
+  .table-wrapper tbody,
+  .table-wrapper tr,
+  .table-wrapper td {
+    display: block;
+    width: 100%;
+  }
+  .table-wrapper thead {
+    display: none;
+  }
+  .table-wrapper tbody {
+    display: grid;
+    gap: 12px;
+  }
+  .table-wrapper tr {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.58);
+    overflow: hidden;
+  }
+  .table-wrapper td {
+    border-bottom: 1px solid var(--line);
+    padding: 12px 14px;
+  }
+  .table-wrapper tr:not(.group-row) td:not(.entry-action-cell):not(.empty-cell) {
+    display: grid;
+    grid-template-columns: minmax(96px, 38%) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+  .table-wrapper td[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .table-wrapper .entry-action-cell {
+    border-bottom: 0;
+    padding-top: 14px;
+  }
+  .entry-edit-button {
+    width: 100%;
+  }
+  .table-wrapper .group-row {
+    border: 0;
+    background: transparent;
+  }
+  .table-wrapper .group-cell {
+    border-bottom: 0;
+    padding: 16px 2px 2px;
+  }
+  .table-wrapper .empty-cell {
+    border-bottom: 0;
+    padding: 18px 14px;
   }
   .dialog-actions-spread {
     flex-direction: column;

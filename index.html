@@ -247,6 +247,7 @@
       <p id="confirmDialogText"></p>
       <div class="dialog-actions">
         <button id="confirmNoButton" class="secondary-button" value="cancel">Nein</button>
+        <button id="confirmAlternateButton" class="secondary-button" value="alternate" hidden>Alternative</button>
         <button id="confirmYesButton" class="danger-button" value="confirm">Ja</button>
       </div>
     </form>
@@ -359,14 +360,17 @@
       </section>
       <section class="settings-group">
         <div class="settings-copy">
-          <strong id="appDataTitle">App-Daten</strong>
-          <p id="deviceTransferTitle">Gerätewechsel</p>
-          <p id="deviceTransferText">Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
+          <strong id="backupGroupTitle">Backup</strong>
+          <p id="backupGroupText">Speichere regelmäßig eine JSON-Datei als eigenes Backup. Die Datei landet im Downloads-Ordner und kann später wieder importiert werden.</p>
         </div>
         <div class="settings-actions">
           <button id="exportDataButton" class="secondary-button" type="button">App-Daten exportieren</button>
           <button id="importDataButton" class="secondary-button" type="button">App-Daten importieren</button>
           <input id="importDataInput" type="file" accept="application/json" hidden>
+        </div>
+        <div class="settings-copy">
+          <p id="deviceTransferTitle">Gerätewechsel</p>
+          <p id="deviceTransferText">Exportiere deine App-Daten als JSON-Datei und importiere sie auf dem anderen Gerät wieder in die App.</p>
         </div>
       </section>
       <section class="settings-group">
@@ -534,6 +538,7 @@
     </div>
   </template>
 
+  <script src="translations.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>
